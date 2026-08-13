@@ -125,8 +125,8 @@
   <script src="../js/live.js"></script>
   <script src="../js/auth-ui.js"></script>
   <script>
-    // Real, shared leaderboard from the backend (falls back to demo data if
-    // the server isn't reachable — see js/live.js).
+    // Real, shared leaderboard from the backend. If the server isn't
+    // reachable we show an error banner rather than demo data — see js/live.js.
     let fullLeaderboard = [];
     let sortMode = 'balance';
     let searchTerm = '';
@@ -157,7 +157,14 @@
     }
 
     async function load() {
-      fullLeaderboard = await DM_LIVE.fetchLeaderboard();
+      DM.clearErrorBanner();
+      const { list, error } = await DM_LIVE.fetchLeaderboard();
+      if (error) {
+        DM.showErrorBanner(`Couldn't load the leaderboard: ${error}`, load);
+        fullLeaderboard = [];
+      } else {
+        fullLeaderboard = list;
+      }
       refresh();
     }
 

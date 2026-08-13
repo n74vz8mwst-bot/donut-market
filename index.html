@@ -127,27 +127,27 @@
         <div class="stats-grid">
           <div class="stat-card glass reveal">
             <div class="stat-icon">🍩</div>
-            <div class="stat-value"><span data-counter="48290500" data-suffix=" DC">0</span></div>
+            <div class="stat-value"><span id="stat-total-coins" data-dynamic-stat data-counter="0" data-suffix=" DC">0</span></div>
             <div class="stat-label">Total Donut Coins in circulation</div>
-            <div class="stat-delta">▲ 3.2% this week</div>
+            <div class="stat-delta" id="stat-total-coins-delta">Loading…</div>
           </div>
           <div class="stat-card glass reveal">
             <div class="stat-icon">🏢</div>
-            <div class="stat-value"><span data-counter="8">0</span></div>
+            <div class="stat-value"><span id="stat-companies" data-dynamic-stat data-counter="0">0</span></div>
             <div class="stat-label">Companies listed</div>
-            <div class="stat-delta">▲ 2 new this month</div>
+            <div class="stat-delta" id="stat-companies-delta">Loading…</div>
           </div>
           <div class="stat-card glass reveal">
             <div class="stat-icon">👥</div>
-            <div class="stat-value"><span data-counter="12842">0</span></div>
-            <div class="stat-label">Active traders</div>
-            <div class="stat-delta">▲ 486 today</div>
+            <div class="stat-value"><span id="stat-traders" data-dynamic-stat data-counter="0">0</span></div>
+            <div class="stat-label">Active traders (7d)</div>
+            <div class="stat-delta" id="stat-traders-delta">Loading…</div>
           </div>
           <div class="stat-card glass reveal">
             <div class="stat-icon">⚡</div>
-            <div class="stat-value"><span data-counter="5931">0</span></div>
+            <div class="stat-value"><span id="stat-trades-today" data-dynamic-stat data-counter="0">0</span></div>
             <div class="stat-label">Trades today</div>
-            <div class="stat-delta">▲ 12% vs yesterday</div>
+            <div class="stat-delta" id="stat-trades-today-delta">Loading…</div>
           </div>
         </div>
       </div>
@@ -286,13 +286,61 @@
   <script src="js/trade-modal.js"></script>
   <script src="js/auth-ui.js"></script>
   <script>
-    (async () => {
-      const companies = await DM_LIVE.fetchCompanies();
-      DM.renderStockCards('#featured-stocks', companies.slice(0, 4));
+    function setStat(id, value, decimals) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.setAttribute('data-counter', String(value));
+      if (decimals) el.setAttribute('data-decimals', String(decimals));
+      DM.animateCounter(el);
+    }
 
-      const board = await DM_LIVE.fetchLeaderboard();
-      DM.renderLeaderboard('#leaderboard-preview', board.slice(0, 5));
-    })();
+    async function loadStats() {
+      const { stats, error } = await DM_LIVE.fetchStats();
+      if (error || !stats) {
+        document.getElementById('stat-total-coins-delta').textContent = 'Unavailable';
+        document.getElementById('stat-companies-delta').textContent = 'Unavailable';
+        document.getElementById('stat-traders-delta').textContent = 'Unavailable';
+        document.getElementById('stat-trades-today-delta').textContent = 'Unavailable';
+        return;
+      }
+
+      setStat('stat-total-coins', Math.round(stats.totalCoins));
+      setStat('stat-companies', stats.companiesListed);
+      setStat('stat-traders', stats.activeTraders);
+      setStat('stat-trades-today', stats.tradesToday);
+
+      document.getElementById('stat-total-coins-delta').textContent = 'Live from the market';
+      document.getElementById('stat-companies-delta').textContent =
+        stats.newCompaniesThisMonth > 0 ? `▲ ${stats.newCompaniesThisMonth} new this month` : 'No new listings this month';
+      document.getElementById('stat-traders-delta').textContent =
+        stats.newUsersToday > 0 ? `▲ ${stats.newUsersToday} new today` : 'Traded in the last 7 days';
+      document.getElementById('stat-trades-today-delta').textContent =
+        stats.tradesDeltaPct === null
+          ? `${stats.tradesToday} so far today`
+          : `${stats.tradesDeltaPct >= 0 ? '▲' : '▼'} ${Math.abs(stats.tradesDeltaPct).toFixed(0)}% vs yesterday`;
+    }
+
+    async function loadHome() {
+      DM.clearErrorBanner();
+
+      const { list: companies, error: companiesError } = await DM_LIVE.fetchCompanies();
+      if (companiesError) {
+        DM.showErrorBanner(`Couldn't load live market data: ${companiesError}`, loadHome);
+      } else {
+        DM.renderStockCards('#featured-stocks', companies.slice(0, 4));
+      }
+
+      const { list: board, error: leaderboardError } = await DM_LIVE.fetchLeaderboard();
+      if (leaderboardError && !companiesError) {
+        DM.showErrorBanner(`Couldn't load the leaderboard: ${leaderboardError}`, loadHome);
+      } else if (!leaderboardError) {
+        DM.renderLeaderboard('#leaderboard-preview', board.slice(0, 5));
+      }
+
+      loadStats();
+    }
+
+    loadHome();
   </script>
 </body>
 </html>

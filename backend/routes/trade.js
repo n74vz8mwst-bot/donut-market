@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const Company = require("../models/Company");
 const User = require("../models/User");
 const Trade = require("../models/Trade");
+const PriceHistory = require("../models/PriceHistory");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
@@ -86,6 +87,12 @@ router.post("/", requireAuth, async (req, res) => {
             total,
           },
         ],
+        { session }
+      );
+      // Record the post-trade price so sparklines/charts reflect real
+      // market movement instead of generated placeholder data.
+      await PriceHistory.create(
+        [{ companyId: company.ticker, price: company.price }],
         { session }
       );
 

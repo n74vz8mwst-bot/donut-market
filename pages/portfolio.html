@@ -211,7 +211,7 @@
       document.getElementById('logged-out-state').style.display = 'none';
       document.getElementById('portfolio-content').style.display = 'block';
 
-      const [{ data: profile }, { data: holdings, error: holdingsErr }, { data: trades }, board] = await Promise.all([
+      const [{ data: profile }, { data: holdings, error: holdingsErr }, { data: trades }, { list: board, error: boardError }] = await Promise.all([
         DM_DB.getMyProfile(),
         DM_DB.getMyHoldings(),
         DM_DB.getMyTrades(20),
@@ -219,6 +219,12 @@
       ]);
 
       if (!profile) return;
+
+      if (boardError) {
+        DM.showErrorBanner(`Couldn't load leaderboard rank: ${boardError}`, loadPortfolio);
+      } else {
+        DM.clearErrorBanner();
+      }
 
       const ownedHoldings = (holdings || []).filter(h => h.shares > 0 && h.companies);
       const portfolioValue = ownedHoldings.reduce((sum, h) => sum + h.shares * h.companies.price, 0);

@@ -90,6 +90,18 @@ const DM_DB = (() => {
     return request("/api/companies");
   }
 
+  // Real recorded price history for every company in one call, e.g.
+  // { dnut: [250.4, 251.1, ...] }. Used for sparklines — see js/live.js.
+  async function getCompaniesHistory() {
+    return request("/api/companies/history/all");
+  }
+
+  // Real, database-backed homepage market statistics (total coins in
+  // circulation, companies listed, active traders, trades today).
+  async function getStats() {
+    return request("/api/stats");
+  }
+
   async function getMyHoldings() {
     if (!getToken()) return { data: [], error: null };
     return request("/api/portfolio/holdings");
@@ -161,7 +173,7 @@ const DM_DB = (() => {
     isConfigured,
     signUp, signIn, signOut, getSession, onAuthStateChange,
     getMyProfile,
-    getCompanies, getMyHoldings, getMyTrades, executeTrade, getLeaderboard, subscribeToCompanies,
+    getCompanies, getCompaniesHistory, getStats, getMyHoldings, getMyTrades, executeTrade, getLeaderboard, subscribeToCompanies,
     adminSetPrice, adminCreateCompany, adminToggleStatus, adminPublishEvent,
     adminGetUsers, adminSetRole, adminGetEvents,
   };

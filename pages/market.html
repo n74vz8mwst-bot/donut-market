@@ -143,8 +143,9 @@
   <script src="../js/trade-modal.js"></script>
   <script src="../js/auth-ui.js"></script>
   <script>
-    // Companies come from your live backend when it's reachable, otherwise
-    // fall back to the demo dataset — see js/live.js.
+    // Companies come from the live MongoDB backend. If the API is
+    // unreachable we show an error banner (see js/main.js showErrorBanner)
+    // instead of silently rendering fake demo data — see js/live.js.
     let allCompanies = [];
     let activeFilter = 'all';
     let searchTerm = '';
@@ -209,7 +210,14 @@
     }
 
     async function loadAndRender() {
-      allCompanies = await DM_LIVE.fetchCompanies();
+      DM.clearErrorBanner();
+      const { list, error } = await DM_LIVE.fetchCompanies();
+      if (error) {
+        DM.showErrorBanner(`Couldn't load live market data: ${error}`, loadAndRender);
+        allCompanies = [];
+      } else {
+        allCompanies = list;
+      }
       renderAll();
     }
 

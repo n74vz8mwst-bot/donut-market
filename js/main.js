@@ -135,40 +135,46 @@ const DM = (() => {
   /* ------------------------------------------------------------------------
      ANIMATED COUNTERS (stat cards)
   ------------------------------------------------------------------------ */
+  // Counts an element up from 0 to its data-counter value. Exported as
+  // DM.animateCounter so pages can trigger it manually once real data has
+  // arrived from the API (see data-dynamic-stat handling below).
+  function animateCounter(el) {
+    const target = parseFloat(el.getAttribute('data-counter'));
+    const decimals = el.getAttribute('data-decimals') ? parseInt(el.getAttribute('data-decimals'), 10) : 0;
+    const prefix = el.getAttribute('data-prefix') || '';
+    const suffix = el.getAttribute('data-suffix') || '';
+    const duration = 1400;
+    const start = performance.now();
+
+    function tick(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const value = target * eased;
+      el.textContent = prefix + value.toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      }) + suffix;
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
   function initCounters() {
-    const counters = document.querySelectorAll('[data-counter]');
+    // Elements marked data-dynamic-stat are populated from a live API call
+    // (see index.html) and animated manually once real numbers arrive —
+    // skip them here so they don't briefly count up to a stale value.
+    const counters = document.querySelectorAll('[data-counter]:not([data-dynamic-stat])');
     if (!counters.length) return;
 
-    const animate = (el) => {
-      const target = parseFloat(el.getAttribute('data-counter'));
-      const decimals = el.getAttribute('data-decimals') ? parseInt(el.getAttribute('data-decimals'), 10) : 0;
-      const prefix = el.getAttribute('data-prefix') || '';
-      const suffix = el.getAttribute('data-suffix') || '';
-      const duration = 1400;
-      const start = performance.now();
-
-      function tick(now) {
-        const progress = Math.min((now - start) / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const value = target * eased;
-        el.textContent = prefix + value.toLocaleString('en-US', {
-          minimumFractionDigits: decimals,
-          maximumFractionDigits: decimals,
-        }) + suffix;
-        if (progress < 1) requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-    };
-
     if (!('IntersectionObserver' in window)) {
-      counters.forEach(animate);
+      counters.forEach(animateCounter);
       return;
     }
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          animate(entry.target);
+          animateCounter(entry.target);
           observer.unobserve(entry.target);
         }
       });
@@ -218,7 +224,13 @@ const DM = (() => {
 
     container.innerHTML = list.map(c => {
       const isUp = c.change >= 0;
-      const series = generateSeries(hashString(c.id), 24, 1);
+      // Real recorded prices when we have them (see js/live.js, which pulls
+      // these from /api/companies/history/all). A company with no trade
+      // history yet just gets a flat line at its current price — honest
+      // about "no movement recorded" rather than inventing a fake chart.
+      const series = (c.history && c.history.length >= 2)
+        ? c.history
+        : [c.price, c.price];
       return `
         <article class="stock-card glass reveal" data-id="${c.id}">
           <div class="stock-card-head">
@@ -459,6 +471,63 @@ const DM = (() => {
   }
 
   /* ------------------------------------------------------------------------
+     ERROR BANNER — persistent (no auto-dismiss) notice shown when live data
+     can't be loaded from the API. Used instead of silently falling back to
+     fake/demo numbers, so a broken connection is never mistaken for real
+     data. Optional retry button re-runs the page's load function.
+  ------------------------------------------------------------------------ */
+  function showErrorBanner(message, onRetry) {
+    let banner = document.querySelector('.dm-error-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.className = 'dm-error-banner';
+      Object.assign(banner.style, {
+        position: 'sticky',
+        top: '0',
+        zIndex: '900',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '14px',
+        padding: '10px 18px',
+        background: '#3a1620',
+        borderBottom: '1px solid rgba(255,95,95,0.35)',
+        color: '#ffb4b4',
+        fontFamily: "'Inter', sans-serif",
+        fontSize: '13.5px',
+        textAlign: 'center',
+      });
+      const main = document.querySelector('main');
+      (main || document.body).prepend(banner);
+    }
+
+    banner.innerHTML = `<span>⚠️ ${message}</span>`;
+    if (onRetry) {
+      const btn = document.createElement('button');
+      btn.textContent = 'Retry';
+      Object.assign(btn.style, {
+        background: 'rgba(255,255,255,0.12)',
+        border: '1px solid rgba(255,255,255,0.2)',
+        color: '#fff',
+        borderRadius: '999px',
+        padding: '4px 14px',
+        fontSize: '12.5px',
+        cursor: 'pointer',
+      });
+      btn.addEventListener('click', () => {
+        clearErrorBanner();
+        onRetry();
+      });
+      banner.appendChild(btn);
+    }
+  }
+
+  function clearErrorBanner() {
+    const banner = document.querySelector('.dm-error-banner');
+    if (banner) banner.remove();
+  }
+
+  /* ------------------------------------------------------------------------
      INIT — run shared behaviors on every page
   ------------------------------------------------------------------------ */
   function init() {
@@ -481,5 +550,8 @@ const DM = (() => {
     renderStockCards,
     renderLeaderboard,
     openToast,
+    animateCounter,
+    showErrorBanner,
+    clearErrorBanner,
   };
 })();

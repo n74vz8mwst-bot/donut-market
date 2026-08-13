@@ -2,6 +2,7 @@ const express = require("express");
 const Company = require("../models/Company");
 const User = require("../models/User");
 const MarketEvent = require("../models/MarketEvent");
+const PriceHistory = require("../models/PriceHistory");
 const { requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
@@ -26,6 +27,7 @@ router.post("/companies", async (req, res) => {
       liquidity: liquidity || 5000,
       status: "open",
     });
+    await PriceHistory.create({ companyId: company.ticker, price: company.price });
     res.status(201).json(company.toJSON());
   } catch (err) {
     if (err.code === 11000) return res.status(409).json({ error: "A company with that ticker already exists." });
@@ -44,6 +46,7 @@ router.patch("/companies/:ticker/price", async (req, res) => {
       { new: true }
     );
     if (!company) return res.status(404).json({ error: "Company not found." });
+    await PriceHistory.create({ companyId: company.ticker, price: company.price });
     res.json(company.toJSON());
   } catch (err) {
     console.error(err);
@@ -80,6 +83,7 @@ router.post("/events", async (req, res) => {
       if (company) {
         company.price = Math.max(company.price * (1 + impactPct / 100), 0.01);
         await company.save();
+        await PriceHistory.create({ companyId: company.ticker, price: company.price });
       }
     }
 

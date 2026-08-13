@@ -11,6 +11,7 @@ const tradeRoutes = require("./routes/trade");
 const portfolioRoutes = require("./routes/portfolio");
 const leaderboardRoutes = require("./routes/leaderboard");
 const adminRoutes = require("./routes/admin");
+const statsRoutes = require("./routes/stats");
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use("/api/trade", tradeRoutes);
 app.use("/api/portfolio", portfolioRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/stats", statsRoutes);
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, message: "🍩 Donut Market API is running." });

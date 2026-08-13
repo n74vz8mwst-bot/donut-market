@@ -6,6 +6,7 @@
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const Company = require("./models/Company");
+const PriceHistory = require("./models/PriceHistory");
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ async function seed() {
       continue;
     }
     await Company.create(c);
+    await PriceHistory.create({ companyId: c.ticker, price: c.price });
     created++;
     console.log(`+ created ${c.ticker} (${c.name})`);
   }
