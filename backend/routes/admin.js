@@ -129,4 +129,40 @@ router.patch("/users/:id/role", async (req, res) => {
   }
 });
 
+// Accepts either { balance } to set an exact new balance, or { delta } to
+// add/subtract from the current one (e.g. delta: 500 or delta: -200).
+// Exactly one of the two is required. Balance can never go negative.
+router.patch("/users/:id/balance", async (req, res) => {
+  try {
+    const { balance, delta } = req.body;
+    const hasBalance = balance !== undefined && balance !== null;
+    const hasDelta = delta !== undefined && delta !== null;
+
+    if (hasBalance === hasDelta) {
+      return res.status(400).json({ error: "Provide exactly one of balance or delta." });
+    }
+    if (hasBalance && (typeof balance !== "number" || balance < 0)) {
+      return res.status(400).json({ error: "Balance must be a non-negative number." });
+    }
+    if (hasDelta && typeof delta !== "number") {
+      return res.status(400).json({ error: "Delta must be a number." });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    const newBalance = hasBalance ? balance : user.balance + delta;
+    if (newBalance < 0) {
+      return res.status(400).json({ error: `That would take ${user.username}'s balance below 0 DC.` });
+    }
+
+    user.balance = newBalance;
+    await user.save();
+    res.json(user.toJSON());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Could not update balance." });
+  }
+});
+
 module.exports = router;

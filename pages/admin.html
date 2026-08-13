@@ -240,11 +240,48 @@
           <td class="num">${DM.formatNumber(u.balance)} DC</td>
           <td><span class="badge-role ${u.role}">${u.role}</span></td>
           <td class="num" style="color:var(--ink-30);">${new Date(u.createdAt).toLocaleDateString()}</td>
-          <td><button class="btn btn-ghost btn-sm" data-toggle-role="${u.id || u._id}" data-current-role="${u.role}">
-            Make ${u.role === 'admin' ? 'trader' : 'admin'}
-          </button></td>
+          <td>
+            <button class="btn btn-ghost btn-sm" data-edit-balance="${u.id || u._id}" data-username="${u.username}" data-current-balance="${u.balance}">Edit balance</button>
+            <button class="btn btn-ghost btn-sm" data-toggle-role="${u.id || u._id}" data-current-role="${u.role}">
+              Make ${u.role === 'admin' ? 'trader' : 'admin'}
+            </button>
+          </td>
         </tr>
       `).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--ink-30);padding:32px;">No traders yet.</td></tr>`;
+
+      document.querySelectorAll('[data-edit-balance]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const userId = btn.getAttribute('data-edit-balance');
+          const username = btn.getAttribute('data-username');
+          const current = parseFloat(btn.getAttribute('data-current-balance'));
+
+          const mode = prompt(
+            `Editing ${username}'s balance (currently ${DM.formatNumber(current)} DC).\n\n` +
+            `Type a plain number to SET the exact balance (e.g. 5000)\n` +
+            `Type +/- a number to ADD or SUBTRACT (e.g. +500 or -200)`,
+            ''
+          );
+          if (mode === null || mode.trim() === '') return;
+
+          const input = mode.trim();
+          const isDelta = input.startsWith('+') || input.startsWith('-');
+          const num = parseFloat(input);
+          if (isNaN(num)) return DM.openToast('Enter a valid number.');
+
+          const { error } = isDelta
+            ? await DM_DB.adminAdjustBalance(userId, num)
+            : await DM_DB.adminSetBalance(userId, num);
+
+          if (error) {
+            DM.openToast(error.message);
+          } else {
+            DM.openToast(isDelta
+              ? `${username}'s balance adjusted by ${num >= 0 ? '+' : ''}${num} DC.`
+              : `${username}'s balance set to ${num} DC.`);
+            renderAdminUsers();
+          }
+        });
+      });
 
       document.querySelectorAll('[data-toggle-role]').forEach(btn => {
         btn.addEventListener('click', async () => {

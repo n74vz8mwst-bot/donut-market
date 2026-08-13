@@ -165,6 +165,20 @@ const DM_DB = (() => {
     });
   }
 
+  async function adminSetBalance(userId, balance) {
+    return request(`/api/admin/users/${userId}/balance`, {
+      method: "PATCH",
+      body: JSON.stringify({ balance }),
+    });
+  }
+
+  async function adminAdjustBalance(userId, delta) {
+    return request(`/api/admin/users/${userId}/balance`, {
+      method: "PATCH",
+      body: JSON.stringify({ delta }),
+    });
+  }
+
   async function adminGetEvents() {
     return request("/api/admin/events");
   }
@@ -175,7 +189,7 @@ const DM_DB = (() => {
     getMyProfile,
     getCompanies, getCompaniesHistory, getStats, getMyHoldings, getMyTrades, executeTrade, getLeaderboard, subscribeToCompanies,
     adminSetPrice, adminCreateCompany, adminToggleStatus, adminPublishEvent,
-    adminGetUsers, adminSetRole, adminGetEvents,
+    adminGetUsers, adminSetRole, adminSetBalance, adminAdjustBalance, adminGetEvents,
   };
 })();
 
