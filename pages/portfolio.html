@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio — Donut Market</title>
+  <meta name="description" content="Track your Donut Coin balance, holdings, and trade history on Donut Market." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍩</text></svg>" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+  <!-- ==================== NAVBAR ==================== -->
+  <header class="navbar">
+    <div class="container nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <span class="donut-mark">🍩</span> Donut Market
+      </a>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a href="../index.html">Home</a>
+        <a href="market.html">Market</a>
+        <a href="portfolio.html" class="active">Portfolio</a>
+        <a href="leaderboard.html">Leaderboard</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="login.html" class="btn btn-ghost btn-sm">Login</a>
+        <a href="market.html" class="btn btn-primary btn-sm">Start Trading</a>
+      </div>
+
+      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <div class="mobile-menu glass">
+      <a href="../index.html">Home</a>
+      <a href="market.html">Market</a>
+      <a href="portfolio.html" class="active">Portfolio</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="login.html">Login</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-header">
+      <div class="container">
+        <span class="eyebrow">Your Account</span>
+        <h1>Portfolio</h1>
+        <p>Log in to see your real holdings. Below is a preview of what your dashboard will look like.</p>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:0;">
+      <div class="container" id="portfolio-container">
+
+        <!-- ==================== LOGGED-OUT STATE ==================== -->
+        <div class="glass empty-state reveal" id="logged-out-state" style="display:none;">
+          <span class="donut-mark">🍩</span>
+          <h3>Log in to see your portfolio</h3>
+          <p>Your balance, holdings, and trade history all live on your account. Log in or create one to get started with 10,000 free Donut Coins.</p>
+          <a href="login.html" class="btn btn-primary">Log in / Sign up</a>
+        </div>
+
+        <div id="portfolio-content" style="display:none;">
+          <!-- ==================== BALANCE SUMMARY ==================== -->
+          <div class="kpi-row">
+            <div class="kpi-card glass reveal">
+              <div class="stat-icon">🍩</div>
+              <div class="stat-value" id="kpi-balance">0</div>
+              <div class="stat-label">Donut Coin balance</div>
+            </div>
+            <div class="kpi-card glass reveal">
+              <div class="stat-icon">📊</div>
+              <div class="stat-value" id="kpi-portfolio-value">0</div>
+              <div class="stat-label">Portfolio value</div>
+            </div>
+            <div class="kpi-card glass reveal">
+              <div class="stat-icon">📈</div>
+              <div class="stat-value" id="kpi-profit">+0.0%</div>
+              <div class="stat-label">All-time profit</div>
+            </div>
+            <div class="kpi-card glass reveal">
+              <div class="stat-icon">🏅</div>
+              <div class="stat-value" id="kpi-rank">Unranked</div>
+              <div class="stat-label">Leaderboard position</div>
+            </div>
+          </div>
+
+          <!-- ==================== EMPTY STATE (no holdings yet) ==================== -->
+          <div class="glass empty-state reveal" id="no-holdings-state" style="display:none;">
+            <span class="donut-mark">🍩</span>
+            <h3>Your portfolio is empty</h3>
+            <p>You haven't bought any companies yet. Head to the market to place your first trade and watch this dashboard come alive with real holdings and history.</p>
+            <a href="market.html" class="btn btn-primary">Browse the market</a>
+          </div>
+
+          <!-- ==================== HOLDINGS TABLE ==================== -->
+          <div id="holdings-section" style="display:none;">
+            <div class="section-heading" style="margin-top:64px;">
+              <span class="eyebrow">Your Positions</span>
+              <h2>Holdings</h2>
+              <p>Live value and profit/loss for every company you own.</p>
+            </div>
+
+            <div class="glass table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Company</th>
+                    <th>Shares</th>
+                    <th>Avg. Price</th>
+                    <th>Current Price</th>
+                    <th>P/L</th>
+                    <th>Value</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="holdings-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ==================== TRADE HISTORY ==================== -->
+          <div class="section-heading" style="margin-top:64px;">
+            <span class="eyebrow">Activity</span>
+            <h2>Trade history</h2>
+            <p>Every buy and sell you make is logged here for full transparency.</p>
+          </div>
+
+          <div class="glass table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Company</th>
+                  <th>Shares</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="trades-table-body">
+                <tr><td colspan="6" style="text-align:center;color:var(--ink-30);padding:40px;">No trades recorded yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="../index.html" class="nav-logo"><span class="donut-mark">🍩</span> Donut Market</a>
+          <p>A virtual stock market built for fun — trade fictional companies, climb the leaderboard, and master the market with zero real-world risk.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Platform</h4>
+          <a href="market.html">Market</a>
+          <a href="portfolio.html">Portfolio</a>
+          <a href="leaderboard.html">Leaderboard</a>
+          <a href="login.html">Login</a>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="#">About</a>
+          <a href="#">Careers</a>
+          <a href="#">Press</a>
+        </div>
+        <div class="footer-col">
+          <h4>Admin</h4>
+          <a href="admin.html">Admin panel</a>
+          <a href="#">API docs</a>
+          <a href="#">Status</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Donut Market. All rights reserved.</span>
+        <span class="footer-disclaimer">Donut Coins have no real-world value. This is a simulated market for entertainment purposes only.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/live.js"></script>
+  <script src="../js/trade-modal.js"></script>
+  <script src="../js/auth-ui.js"></script>
+  <script>
+    const STARTING_BALANCE = 10000;
+
+    function formatSigned(pct) {
+      const sign = pct >= 0 ? '+' : '';
+      return `${sign}${pct.toFixed(1)}%`;
+    }
+
+    async function loadPortfolio() {
+      const { data: { session } } = await DM_DB.getSession();
+      if (!session) {
+        document.getElementById('logged-out-state').style.display = 'block';
+        document.getElementById('portfolio-content').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('logged-out-state').style.display = 'none';
+      document.getElementById('portfolio-content').style.display = 'block';
+
+      const [{ data: profile }, { data: holdings, error: holdingsErr }, { data: trades }, board] = await Promise.all([
+        DM_DB.getMyProfile(),
+        DM_DB.getMyHoldings(),
+        DM_DB.getMyTrades(20),
+        DM_LIVE.fetchLeaderboard(),
+      ]);
+
+      if (!profile) return;
+
+      const ownedHoldings = (holdings || []).filter(h => h.shares > 0 && h.companies);
+      const portfolioValue = ownedHoldings.reduce((sum, h) => sum + h.shares * h.companies.price, 0);
+      const netWorth = profile.balance + portfolioValue;
+      const profitPct = ((netWorth - STARTING_BALANCE) / STARTING_BALANCE) * 100;
+
+      document.getElementById('kpi-balance').textContent = DM.formatNumber(profile.balance) + ' DC';
+      document.getElementById('kpi-portfolio-value').textContent = DM.formatNumber(portfolioValue) + ' DC';
+      const profitEl = document.getElementById('kpi-profit');
+      profitEl.textContent = formatSigned(profitPct);
+      profitEl.style.color = profitPct >= 0 ? 'var(--profit)' : 'var(--loss)';
+
+      const rankIndex = board.findIndex(t => t.name === profile.username);
+      document.getElementById('kpi-rank').textContent = rankIndex >= 0 ? `#${rankIndex + 1}` : 'Unranked';
+
+      if (!ownedHoldings.length) {
+        document.getElementById('no-holdings-state').style.display = 'block';
+        document.getElementById('holdings-section').style.display = 'none';
+      } else {
+        document.getElementById('no-holdings-state').style.display = 'none';
+        document.getElementById('holdings-section').style.display = 'block';
+        document.getElementById('holdings-table-body').innerHTML = ownedHoldings.map(h => {
+          const c = h.companies;
+          const value = h.shares * c.price;
+          const pl = (c.price - h.avgPrice) * h.shares;
+          const plPct = h.avgPrice ? ((c.price - h.avgPrice) / h.avgPrice) * 100 : 0;
+          return `
+            <tr class="body-row">
+              <td><span style="margin-right:8px;">${c.icon}</span>${c.name}</td>
+              <td class="num">${h.shares}</td>
+              <td class="num">${DM.formatNumber(h.avgPrice)} DC</td>
+              <td class="num">${DM.formatNumber(c.price)} DC</td>
+              <td class="num" style="color:${pl >= 0 ? 'var(--profit)' : 'var(--loss)'};">
+                ${pl >= 0 ? '+' : ''}${DM.formatNumber(pl)} DC (${formatSigned(plPct)})
+              </td>
+              <td class="num" style="font-weight:600;">${DM.formatNumber(value)} DC</td>
+              <td><button class="btn btn-ghost btn-sm" data-sell-id="${c.id}">Sell</button></td>
+            </tr>
+          `;
+        }).join('');
+
+        document.querySelectorAll('#holdings-table-body [data-sell-id]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const h = ownedHoldings.find(x => x.companies.id === btn.getAttribute('data-sell-id'));
+            if (h) DM_TRADE.open(h.companies, 'sell');
+          });
+        });
+      }
+
+      if (trades && trades.length) {
+        document.getElementById('trades-table-body').innerHTML = trades.map(t => `
+          <tr class="body-row">
+            <td class="num" style="color:var(--ink-30);">${new Date(t.created_at).toLocaleDateString()}</td>
+            <td style="color:${t.type === 'buy' ? 'var(--profit)' : 'var(--loss)'};font-weight:600;text-transform:capitalize;">${t.type}</td>
+            <td><span style="margin-right:6px;">${t.companies.icon}</span>${t.companies.name}</td>
+            <td class="num">${t.shares}</td>
+            <td class="num">${DM.formatNumber(t.price)} DC</td>
+            <td class="num" style="font-weight:600;">${DM.formatNumber(t.total)} DC</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    document.addEventListener('dm:trade-complete', loadPortfolio);
+    document.addEventListener('dm:profile-loaded', loadPortfolio);
+    loadPortfolio();
+  </script>
+</body>
+</html>

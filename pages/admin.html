@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Donut Market</title>
+  <meta name="description" content="Donut Market admin panel — manage companies, prices, and market events." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍩</text></svg>" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+  <!-- ==================== NAVBAR ==================== -->
+  <header class="navbar">
+    <div class="container nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <span class="donut-mark">🍩</span> Donut Market
+      </a>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a href="../index.html">Home</a>
+        <a href="market.html">Market</a>
+        <a href="portfolio.html">Portfolio</a>
+        <a href="leaderboard.html">Leaderboard</a>
+      </nav>
+
+      <div class="nav-actions">
+        <span class="badge-role admin">Admin</span>
+        <a href="login.html" class="btn btn-ghost btn-sm">Sign out</a>
+      </div>
+
+      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <div class="mobile-menu glass">
+      <a href="../index.html">Home</a>
+      <a href="market.html">Market</a>
+      <a href="portfolio.html">Portfolio</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="login.html">Sign out</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-header">
+      <div class="container">
+        <span class="eyebrow">Restricted Access</span>
+        <h1>Admin panel</h1>
+        <p>Manage listed companies, adjust prices, publish market events, and moderate traders.</p>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:0;">
+      <div class="container">
+
+        <!-- ==================== ACCESS GATES ==================== -->
+        <div class="access-denied glass reveal" id="logged-out-state" style="display:none;">
+          <span class="donut-mark">🍩</span>
+          <h2>Log in required</h2>
+          <p>You need to be logged in as an admin to view this page.</p>
+          <a href="login.html" class="btn btn-primary">Log in</a>
+        </div>
+        <div class="access-denied glass reveal" id="not-admin-state" style="display:none;">
+          <span class="donut-mark">🔒</span>
+          <h2>Admins only</h2>
+          <p>Your account doesn't have admin access. Ask an existing admin to promote you, or check SETUP.md for how to set the first admin manually.</p>
+          <a href="../index.html" class="btn btn-ghost">Back home</a>
+        </div>
+
+        <div class="admin-layout" id="admin-content" style="display:none;">
+
+          <!-- ==================== SIDEBAR ==================== -->
+          <aside class="admin-sidebar glass">
+            <a href="#overview" class="active" data-panel-link="overview">📊 Overview</a>
+            <a href="#companies" data-panel-link="companies">🏢 Companies</a>
+            <a href="#events" data-panel-link="events">📰 Market Events</a>
+            <a href="#users" data-panel-link="users">👥 Traders</a>
+            <a href="#settings" data-panel-link="settings">⚙️ Settings</a>
+          </aside>
+
+          <!-- ==================== MAIN PANEL ==================== -->
+          <div>
+
+            <!-- Overview KPIs -->
+            <div class="kpi-row">
+              <div class="kpi-card glass reveal">
+                <div class="stat-icon">🍩</div>
+                <div class="stat-value">48.2M</div>
+                <div class="stat-label">Coins in circulation</div>
+              </div>
+              <div class="kpi-card glass reveal">
+                <div class="stat-icon">🏢</div>
+                <div class="stat-value">8</div>
+                <div class="stat-label">Listed companies</div>
+              </div>
+              <div class="kpi-card glass reveal">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value">12,842</div>
+                <div class="stat-label">Registered traders</div>
+              </div>
+              <div class="kpi-card glass reveal">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-value">5,931</div>
+                <div class="stat-label">Trades today</div>
+              </div>
+            </div>
+
+            <!-- Companies management -->
+            <div class="admin-panel glass" id="companies">
+              <div class="admin-panel-head">
+                <h3>Manage companies</h3>
+                <button class="btn btn-primary btn-sm" id="new-company-btn">+ New company</button>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table" id="admin-companies-table">
+                  <thead>
+                    <tr>
+                      <th>Company</th>
+                      <th>Ticker</th>
+                      <th>Price</th>
+                      <th>Liquidity</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Market events -->
+            <div class="admin-panel glass" id="events">
+              <div class="admin-panel-head">
+                <h3>Market events &amp; news</h3>
+                <button class="btn btn-primary btn-sm" id="publish-event-btn">+ Publish event</button>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table" id="admin-events-table">
+                  <thead><tr><th>Headline</th><th>Affected Ticker</th><th>Impact</th><th>Published</th></tr></thead>
+                  <tbody>
+                    <tr><td colspan="4" style="text-align:center;color:var(--ink-30);padding:32px;">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Trader moderation -->
+            <div class="admin-panel glass" id="users">
+              <div class="admin-panel-head">
+                <h3>Traders</h3>
+                <div class="search-input" style="min-width:220px;">
+                  <span aria-hidden="true">🔍</span>
+                  <input type="text" placeholder="Search traders…" />
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>Trader</th><th>Balance</th><th>Role</th><th>Joined</th><th></th></tr></thead>
+                  <tbody id="admin-users-table"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="admin-panel glass" id="settings">
+              <div class="admin-panel-head"><h3>Market settings</h3></div>
+              <div class="form-group">
+                <label for="starting-balance">Starting balance for new traders (DC)</label>
+                <input type="text" id="starting-balance" value="10000" />
+              </div>
+              <div class="form-group">
+                <label for="market-hours">Market hours</label>
+                <input type="text" id="market-hours" value="24/7 — always open" />
+              </div>
+              <button class="btn btn-primary" onclick="DM.openToast('Settings saved (preview only).')">Save settings</button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="../js/main.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/live.js"></script>
+  <script src="../js/auth-ui.js"></script>
+  <script>
+    let companiesCache = [];
+
+    async function renderAdminCompanies() {
+      const { data, error } = await DM_DB.getCompanies();
+      companiesCache = error ? [] : data;
+      const body = document.querySelector('#admin-companies-table tbody');
+      body.innerHTML = companiesCache.map(c => `
+        <tr class="body-row">
+          <td><span style="margin-right:8px;">${c.icon}</span>${c.name}</td>
+          <td class="num" style="color:var(--ink-30);">$${c.id.toUpperCase()}</td>
+          <td class="num">${DM.formatNumber(c.price)} DC</td>
+          <td class="num">${DM.formatNumber(c.liquidity)}</td>
+          <td><span class="stock-status ${c.status === 'closed' ? 'closed' : ''}">${c.status === 'open' ? '● Open' : 'Closed'}</span></td>
+          <td>
+            <button class="btn btn-ghost btn-sm" data-edit-price="${c.id}">Edit price</button>
+            <button class="btn btn-ghost btn-sm" data-toggle="${c.id}">${c.status === 'open' ? 'Close' : 'Reopen'}</button>
+          </td>
+        </tr>
+      `).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--ink-30);padding:32px;">No companies yet — create one below.</td></tr>`;
+
+      body.querySelectorAll('[data-edit-price]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const c = companiesCache.find(x => x.id === btn.getAttribute('data-edit-price'));
+          const input = prompt(`New price for ${c.name} (currently ${c.price} DC):`, c.price);
+          if (input === null) return;
+          const price = parseFloat(input);
+          if (!price || price <= 0) return DM.openToast('Enter a valid positive price.');
+          const { error } = await DM_DB.adminSetPrice(c.id, price);
+          DM.openToast(error ? error.message : `${c.name} price updated to ${price} DC.`);
+          if (!error) renderAdminCompanies();
+        });
+      });
+
+      body.querySelectorAll('[data-toggle]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const c = companiesCache.find(x => x.id === btn.getAttribute('data-toggle'));
+          const { error } = await DM_DB.adminToggleStatus(c.id);
+          DM.openToast(error ? error.message : `${c.name} is now ${c.status === 'open' ? 'closed' : 'open'}.`);
+          if (!error) renderAdminCompanies();
+        });
+      });
+    }
+
+    async function renderAdminUsers() {
+      const { data, error } = await DM_DB.adminGetUsers();
+      const users = error ? [] : data;
+      document.getElementById('admin-users-table').innerHTML = users.map(u => `
+        <tr class="body-row">
+          <td style="font-weight:600;">${u.username}</td>
+          <td class="num">${DM.formatNumber(u.balance)} DC</td>
+          <td><span class="badge-role ${u.role}">${u.role}</span></td>
+          <td class="num" style="color:var(--ink-30);">${new Date(u.createdAt).toLocaleDateString()}</td>
+          <td><button class="btn btn-ghost btn-sm" data-toggle-role="${u.id || u._id}" data-current-role="${u.role}">
+            Make ${u.role === 'admin' ? 'trader' : 'admin'}
+          </button></td>
+        </tr>
+      `).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--ink-30);padding:32px;">No traders yet.</td></tr>`;
+
+      document.querySelectorAll('[data-toggle-role]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const newRole = btn.getAttribute('data-current-role') === 'admin' ? 'trader' : 'admin';
+          const { error } = await DM_DB.adminSetRole(btn.getAttribute('data-toggle-role'), newRole);
+          DM.openToast(error ? error.message : `Role updated to ${newRole}.`);
+          if (!error) renderAdminUsers();
+        });
+      });
+    }
+
+    async function renderAdminEvents() {
+      const { data } = await DM_DB.adminGetEvents();
+      const events = data || [];
+      const body = document.querySelector('#admin-events-table tbody');
+      if (!body) return;
+      body.innerHTML = events.map(e => `
+        <tr class="body-row">
+          <td>${e.headline}</td>
+          <td>${e.companyId ? e.companyId.toUpperCase() : '—'}</td>
+          <td style="color:${e.impactPct >= 0 ? 'var(--profit)' : 'var(--loss)'};">${e.impactPct >= 0 ? '▲' : '▼'} ${Math.abs(e.impactPct)}%</td>
+          <td class="num" style="color:var(--ink-30);">${new Date(e.createdAt).toLocaleString()}</td>
+        </tr>
+      `).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--ink-30);padding:32px;">No events published yet.</td></tr>`;
+    }
+
+    document.getElementById('new-company-btn')?.addEventListener('click', async () => {
+      const id = prompt('Ticker (short, letters only, e.g. "puff"):');
+      if (!id) return;
+      const name = prompt('Company name:');
+      if (!name) return;
+      const icon = prompt('Emoji icon:', '🍩') || '🍩';
+      const sector = prompt('Sector:', 'Consumer') || 'Consumer';
+      const price = parseFloat(prompt('Starting price (DC):', '100'));
+      if (!price || price <= 0) return DM.openToast('Enter a valid positive price.');
+      const liquidity = parseFloat(prompt('Liquidity (higher = price moves less per trade):', '5000')) || 5000;
+
+      const { error } = await DM_DB.adminCreateCompany({ id, name, icon, sector, price, liquidity });
+      DM.openToast(error ? error.message : `${name} listed on the market.`);
+      if (!error) renderAdminCompanies();
+    });
+
+    document.getElementById('publish-event-btn')?.addEventListener('click', async () => {
+      const headline = prompt('Headline:');
+      if (!headline) return;
+      const companyId = prompt('Affected ticker (leave blank for none):') || null;
+      let impactPct = 0;
+      if (companyId) {
+        impactPct = parseFloat(prompt('Price impact %, e.g. 5 or -3:', '0')) || 0;
+      }
+      const { error } = await DM_DB.adminPublishEvent(headline, companyId, impactPct);
+      DM.openToast(error ? error.message : 'Event published.');
+      if (!error) { renderAdminEvents(); renderAdminCompanies(); }
+    });
+
+    // Sidebar active-state on click (single-page anchor sections)
+    document.querySelectorAll('[data-panel-link]').forEach(link => {
+      link.addEventListener('click', () => {
+        document.querySelectorAll('[data-panel-link]').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+      });
+    });
+
+    async function gateAndLoad() {
+      const { data: { session } } = await DM_DB.getSession();
+      if (!session) {
+        document.getElementById('logged-out-state').style.display = 'block';
+        return;
+      }
+      const { data: profile } = await DM_DB.getMyProfile();
+      if (!profile || profile.role !== 'admin') {
+        document.getElementById('not-admin-state').style.display = 'block';
+        return;
+      }
+      document.getElementById('admin-content').style.display = 'grid';
+      renderAdminCompanies();
+      renderAdminUsers();
+      renderAdminEvents();
+    }
+
+    gateAndLoad();
+  </script>
+</body>
+</html>

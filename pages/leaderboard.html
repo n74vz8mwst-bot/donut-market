@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboard — Donut Market</title>
+  <meta name="description" content="See the top ranked traders on Donut Market by balance and profit." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍩</text></svg>" />
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+
+  <!-- ==================== NAVBAR ==================== -->
+  <header class="navbar">
+    <div class="container nav-inner">
+      <a href="../index.html" class="nav-logo">
+        <span class="donut-mark">🍩</span> Donut Market
+      </a>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a href="../index.html">Home</a>
+        <a href="market.html">Market</a>
+        <a href="portfolio.html">Portfolio</a>
+        <a href="leaderboard.html" class="active">Leaderboard</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="login.html" class="btn btn-ghost btn-sm">Login</a>
+        <a href="market.html" class="btn btn-primary btn-sm">Start Trading</a>
+      </div>
+
+      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <div class="mobile-menu glass">
+      <a href="../index.html">Home</a>
+      <a href="market.html">Market</a>
+      <a href="portfolio.html">Portfolio</a>
+      <a href="leaderboard.html" class="active">Leaderboard</a>
+      <a href="login.html">Login</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-header">
+      <div class="container">
+        <span class="eyebrow">Season 1 · Global Rankings</span>
+        <h1>Leaderboard</h1>
+        <p>Ranked by total Donut Coin balance. Updated in real time as trades settle.</p>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:0;">
+      <div class="container">
+
+        <!-- ==================== TOP 3 PODIUM ==================== -->
+        <div class="stats-grid" id="podium" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px;"></div>
+
+        <!-- ==================== TOOLBAR ==================== -->
+        <div class="page-toolbar glass">
+          <div class="search-input">
+            <span aria-hidden="true">🔍</span>
+            <input type="text" id="leaderboard-search" placeholder="Search traders…" />
+          </div>
+          <div class="filter-chips">
+            <button class="chip active" data-filter="balance">By Balance</button>
+            <button class="chip" data-filter="profit">By Profit %</button>
+          </div>
+        </div>
+
+        <!-- ==================== FULL LEADERBOARD ==================== -->
+        <div class="leaderboard-panel glass">
+          <div class="leaderboard-row head">
+            <span>Rank</span>
+            <span>Trader</span>
+            <span style="text-align:right;">Balance</span>
+            <span style="text-align:right;">Profit</span>
+          </div>
+          <div id="leaderboard-full"></div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="../index.html" class="nav-logo"><span class="donut-mark">🍩</span> Donut Market</a>
+          <p>A virtual stock market built for fun — trade fictional companies, climb the leaderboard, and master the market with zero real-world risk.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Platform</h4>
+          <a href="market.html">Market</a>
+          <a href="portfolio.html">Portfolio</a>
+          <a href="leaderboard.html">Leaderboard</a>
+          <a href="login.html">Login</a>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="#">About</a>
+          <a href="#">Careers</a>
+          <a href="#">Press</a>
+        </div>
+        <div class="footer-col">
+          <h4>Admin</h4>
+          <a href="admin.html">Admin panel</a>
+          <a href="#">API docs</a>
+          <a href="#">Status</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Donut Market. All rights reserved.</span>
+        <span class="footer-disclaimer">Donut Coins have no real-world value. This is a simulated market for entertainment purposes only.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/live.js"></script>
+  <script src="../js/auth-ui.js"></script>
+  <script>
+    // Real, shared leaderboard from the backend (falls back to demo data if
+    // the server isn't reachable — see js/live.js).
+    let fullLeaderboard = [];
+    let sortMode = 'balance';
+    let searchTerm = '';
+
+    function renderPodium(list) {
+      const top3 = list.slice(0, 3);
+      const medals = ['🥇', '🥈', '🥉'];
+      document.getElementById('podium').innerHTML = top3.map((t, i) => `
+        <div class="stat-card glass reveal" style="text-align:center;">
+          <div style="font-size:32px;margin-bottom:10px;">${medals[i]}</div>
+          <div class="trader-avatar" style="margin:0 auto 14px;">${t.name.slice(0,2).toUpperCase()}</div>
+          <div style="font-weight:700;font-size:16px;margin-bottom:4px;">${t.name}</div>
+          <div style="color:var(--ink-30);font-size:13px;margin-bottom:14px;">${t.tag}</div>
+          <div class="stat-value" style="font-size:22px;">${DM.formatCompact(t.balance)} DC</div>
+          <div class="stat-delta">${t.profit >= 0 ? '+' : ''}${t.profit.toFixed(1)}% profit</div>
+        </div>
+      `).join('') || `<div class="empty-state" style="grid-column:1/-1;"><p>No traders yet — be the first to sign up.</p></div>`;
+    }
+
+    function refresh() {
+      let list = fullLeaderboard.filter(t =>
+        t.name.toLowerCase().includes(searchTerm) || t.tag.toLowerCase().includes(searchTerm)
+      );
+      list = [...list].sort((a, b) => sortMode === 'balance' ? b.balance - a.balance : b.profit - a.profit);
+      list = list.map((t, i) => ({ ...t, rank: i + 1 }));
+      renderPodium(fullLeaderboard); // podium always reflects true top 3 by balance, unaffected by search
+      DM.renderLeaderboard('#leaderboard-full', list);
+    }
+
+    async function load() {
+      fullLeaderboard = await DM_LIVE.fetchLeaderboard();
+      refresh();
+    }
+
+    document.getElementById('leaderboard-search').addEventListener('input', (e) => {
+      searchTerm = e.target.value.trim().toLowerCase();
+      refresh();
+    });
+
+    document.querySelectorAll('.filter-chips .chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        sortMode = chip.getAttribute('data-filter');
+        refresh();
+      });
+    });
+
+    load();
+  </script>
+</body>
+</html>
