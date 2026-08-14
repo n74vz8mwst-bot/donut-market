@@ -155,7 +155,7 @@ const DM = (() => {
 
   // A persistent, dismissable notice for "we couldn't load live data". Shown
   // instead of quietly rendering placeholder numbers that look real.
-  function showBanner(message, onRetry) {
+  function showBanner(message, onRetry, kind = 'error') {
     let banner = $('.banner');
     if (!banner) {
       banner = el('div', { class: 'banner' });
@@ -163,7 +163,8 @@ const DM = (() => {
       if (nav && nav.parentNode) nav.parentNode.insertBefore(banner, nav.nextSibling);
       else document.body.prepend(banner);
     }
-    banner.innerHTML = `<span>⚠️ ${esc(message)}</span>`;
+    banner.className = `banner banner-${kind}`;
+    banner.innerHTML = `<span>${kind === 'error' ? '⚠️' : '⏳'} ${esc(message)}</span>`;
     if (onRetry) {
       const btn = el('button', { class: 'btn btn-xs btn-ghost' }, 'Retry');
       btn.addEventListener('click', () => { clearBanner(); onRetry(); });

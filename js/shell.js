@@ -194,15 +194,31 @@ const DM_SHELL = (() => {
     const { data } = await DM_API.quotes();
     if (!data || !data.quotes || !data.quotes.length) return;
 
+    // Rebuilding the markup would restart the marquee animation and make the
+    // tape visibly jump every refresh, so once it's built we only patch the
+    // numbers in place.
+    const existing = track.querySelectorAll('.tape-item');
+    if (existing.length === data.quotes.length * 2) {
+      data.quotes.forEach((q, i) => {
+        for (const node of [existing[i], existing[i + data.quotes.length]]) {
+          if (!node || node.dataset.ticker !== q.ticker) return;
+          DM.setText(node.querySelector('.px'), DM.price(q.price));
+          const ch = node.querySelector('.ch');
+          ch.textContent = DM.delta(q.change_pct);
+          ch.className = `ch ${DM.dirClass(q.change_pct)}`;
+        }
+      });
+      return;
+    }
+
     const items = data.quotes
-      .map((q) => {
-        const cls = DM.dirClass(q.change_pct);
-        return `<a class="tape-item" href="${DM.link('company.html')}?t=${q.ticker}">
+      .map(
+        (q) => `<a class="tape-item" data-ticker="${DM.esc(q.ticker)}" href="${DM.link('company.html')}?t=${q.ticker}">
           <span class="sym">${DM.esc(q.ticker.toUpperCase())}</span>
           <span class="px">${DM.price(q.price)}</span>
-          <span class="ch ${cls}">${DM.delta(q.change_pct)}</span>
-        </a>`;
-      })
+          <span class="ch ${DM.dirClass(q.change_pct)}">${DM.delta(q.change_pct)}</span>
+        </a>`
+      )
       .join('');
 
     // Duplicated once so the marquee can loop seamlessly at -50%.
@@ -232,6 +248,24 @@ const DM_SHELL = (() => {
     if (themeBtn) themeBtn.addEventListener('click', DM.toggleTheme);
 
     document.addEventListener('dm:signed-out', () => { profile = null; renderAccount(); });
+
+    // Free hosting spins the server down when nobody's around. Say so, rather
+    // than leaving empty panels that look like a bug.
+    let wakingShown = false;
+    document.addEventListener('dm:slow', () => {
+      if (wakingShown) return;
+      wakingShown = true;
+      DM.showBanner(
+        'Waking the exchange up — free hosting suspends the server when it’s idle. This can take up to a minute.',
+        null,
+        'info'
+      );
+    });
+    document.addEventListener('dm:responsive', () => {
+      if (!wakingShown) return;
+      wakingShown = false;
+      DM.clearBanner();
+    });
     // A fill changes buying power, so the navbar has to know about it.
     document.addEventListener('dm:trade', refreshProfile);
 

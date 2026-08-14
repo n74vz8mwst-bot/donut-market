@@ -1,149 +1,172 @@
-# Donut Market — Setup & Deployment Guide
+# Donut Market — Setup & Deployment
 
-Your site now has a real backend: **Node.js + Express + MongoDB**, with JWT
-login, a shared leaderboard, and a real trading engine where buy/sell orders
-move prices (not random numbers). This guide gets it running for free and
-live on the internet.
-
-The backend also serves your frontend (`index.html`, `css/`, `js/`, `pages/`)
-directly — so one free host runs the whole site, API included.
+Two ways to run it. Start with the first one.
 
 ---
 
-## 1. Create a free MongoDB database (MongoDB Atlas)
+## 1. Run it right now (no database, no accounts)
 
-1. Go to https://www.mongodb.com/cloud/atlas/register and create a free account.
-2. Create a new **free (M0) cluster** — any provider/region is fine.
-3. **Database Access** (left sidebar) → **Add New Database User** → set a
-   username and password (save these, you'll need them next).
-4. **Network Access** (left sidebar) → **Add IP Address** → **Allow Access
-   From Anywhere** (`0.0.0.0/0`). This is required because your free host's
-   server IP isn't fixed.
-5. **Database** → **Connect** → **Drivers** → copy the connection string. It
-   looks like:
-   ```
-   mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
-   ```
-6. Add a database name to the path so your data has its own space, e.g.
-   `...mongodb.net/donutmarket?retryWrites=...`
-
-## 2. Configure your backend locally
-
-1. Open `backend/.env` and fill in:
-   ```
-   MONGODB_URI=mongodb+srv://yourUser:yourPassword@cluster0.xxxxx.mongodb.net/donutmarket?retryWrites=true&w=majority
-   JWT_SECRET=some-long-random-string
-   PORT=3000
-   ```
-   Generate a good `JWT_SECRET` with:
-   ```
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-   ```
-2. Install dependencies and seed the starting companies:
-   ```
-   cd backend
-   npm install
-   npm run seed
-   ```
-3. Run it locally:
-   ```
-   npm run dev
-   ```
-   Then open **http://localhost:3000** — that's your whole site, frontend and
-   API together. Sign up for an account, browse the market, place a trade.
-
-## 3. Make yourself an admin
-
-Sign up on the site normally first (this creates your user in MongoDB).
-Then, in Atlas: **Database → Browse Collections → donutmarket → users** →
-find your user document → edit it → change `"role": "trader"` to
-`"role": "admin"` → save. Refresh `/pages/admin.html` and you're in.
-
-## 4. Deploy for free and open to the public
-
-**Render** (recommended, generous free tier for small Node apps):
-
-1. Push this whole project to a GitHub repo.
-2. Go to https://render.com → **New** → **Web Service** → connect your repo.
-3. Settings:
-   - **Root Directory:** `backend`
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-4. Add environment variables (same as your `.env`): `MONGODB_URI`,
-   `JWT_SECRET`, and `PORT` (Render sets its own `PORT` automatically — you
-   can leave yours as a fallback, `server.js` already handles both).
-5. Deploy. Render gives you a public URL like
-   `https://donut-market.onrender.com` — that's your live site.
-
-Other equally free options if you prefer: **Railway**, **Cyclic**, **Fly.io**.
-The steps are the same shape: point it at `backend/`, set the same two
-environment variables, deploy.
-
-> Free-tier note: most of these put your server to sleep after ~15 minutes
-> of no traffic and take a few seconds to wake back up on the next request —
-> totally fine for trying this out and sharing with people.
-
-## 5. What's already wired up
-
-- **Signup/Login** — real accounts, passwords hashed with bcrypt, JWT session
-  stored in the browser (`pages/login.html`). New accounts start with the
-  admin-configured starting balance (see below).
-- **Trading** — `POST /api/trade` moves each company's price based on the
-  size of the order relative to its `liquidity` value (bigger orders move
-  price more), capped at 25% per single trade so nothing breaks. This runs
-  inside a MongoDB transaction so balance, holdings, price, and the trade log
-  all update together or not at all.
-- **Live market movement** — companies also drift on their own between
-  trades. Each time a company's price is read, any elapsed time since it was
-  last updated is turned into small random ticks with a gentle pull back
-  toward its listing price (thinner/low-liquidity companies swing more). This
-  is a lazy on-read model — no background worker or cron needed, so it works
-  on a free host that sleeps. See `backend/utils/marketDrift.js`.
-- **Real price history & charts** — every price change (trade, drift, admin
-  edit, news event) is recorded in a `PriceHistory` collection, so the
-  sparklines on stock cards show the company's actual recorded prices. A
-  brand-new company with no history yet shows an honest flat line rather than
-  invented movement.
-- **Real homepage stats** — the four stat cards on the landing page
-  (`GET /api/stats`) are computed live from the database: total Donut Coins
-  in circulation, companies listed, active traders (traded in the last 7
-  days), and trades today. No hardcoded numbers.
-- **Leaderboard** — `GET /api/leaderboard` ranks every trader by balance +
-  live holdings value, shared across everyone. Profit % is measured against
-  each trader's own starting balance.
-- **Admin panel** (`pages/admin.html`) — create companies, edit prices,
-  open/close markets, publish news events that move a stock's price, promote/
-  demote traders, **edit any trader's balance** (set an exact amount or
-  add/subtract a delta), and **set the starting balance** handed to new
-  traders. Every admin route re-checks your role server-side.
-
-## 6. Where things live
-
-```
-backend/
-  server.js          — Express app, serves the frontend + mounts /api routes
-  models/            — Mongoose schemas (User, Company, Trade, MarketEvent,
-                       PriceHistory, Settings)
-  middleware/auth.js — JWT verification, requireAuth / requireAdmin
-  routes/            — auth, companies, trade, portfolio, leaderboard, admin, stats
-  utils/marketDrift.js — ambient between-trade price movement
-  seed.js            — populates the 8 starting companies (run once)
-
-js/api.js       — frontend's connection to your backend (fetch + JWT)
-js/live.js      — maps live company/leaderboard/stats data into the existing UI
-js/main.js      — shared rendering (stock cards, sparklines, counters, banners)
-js/trade-modal.js — the Buy/Sell popup used on the market and portfolio pages
-js/auth-ui.js   — swaps the navbar's Login button for your balance once logged in
+```bash
+cd backend
+npm install
+npm run dev:memory
 ```
 
-If the backend isn't running or isn't reachable, each page shows a visible
-error banner (with a Retry button) rather than silently displaying fake data —
-so a broken connection is never mistaken for a real, working market.
+Open <http://localhost:3000>.
 
-## 7. A note on "realism"
+This boots a real MongoDB in a temporary folder — as a single-node replica set,
+so trades still run in proper transactions — seeds twelve companies with ten
+days of backfilled candles, creates an admin account, and starts the server
+against it. The first run downloads the database binary (~90 MB); after that
+it's instant.
 
-Because charts, stats, and the "active traders" count are now backed by real
-recorded data, they start out sparse right after your first deploy and fill in
-naturally as the market runs and people trade. That's the intended trade-off of
-removing the old demo numbers — everything you see is real, even when that means
-starting small.
+It prints the admin login on startup:
+
+```
+🔑  Admin login: admin@donut.market / donutdonut
+```
+
+Everything is thrown away when you stop it. Use this for trying the simulator
+and for development.
+
+---
+
+## 2. Run it for real (MongoDB Atlas)
+
+Use this when you want the market to persist.
+
+### Create the database
+
+1. Sign up at <https://www.mongodb.com/cloud/atlas/register> and create a free
+   **M0** cluster.
+2. **Database Access** → add a database user with a username and password.
+3. **Network Access** → **Add IP Address** → **Allow Access From Anywhere**
+   (`0.0.0.0/0`). A free host's outbound IP isn't fixed, so a narrower rule
+   will lock you out.
+4. **Database** → **Connect** → **Drivers** → copy the connection string, and
+   put a database name in the path:
+
+   ```
+   mongodb+srv://user:password@cluster0.xxxxx.mongodb.net/donutmarket?retryWrites=true&w=majority
+   ```
+
+Atlas gives you a replica set, which is what lets order placement run inside a
+transaction. A bare standalone `mongod` doesn't — the server will still run,
+but it warns on startup that a crash mid-order could leave it half-applied.
+
+### Configure and seed
+
+Create `backend/.env` from the example:
+
+```
+MONGODB_URI=mongodb+srv://…/donutmarket?retryWrites=true&w=majority
+JWT_SECRET=a-long-random-string
+PORT=3000
+```
+
+Generate a real secret:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Then:
+
+```bash
+cd backend
+npm install
+npm run seed        # lists the starting companies with backfilled history
+npm run dev         # http://localhost:3000
+```
+
+`npm run seed` is safe to re-run — it skips tickers that already exist.
+`npm run seed:reset` wipes companies, candles and news and starts over,
+and also creates an admin account if there isn't one.
+
+### Make yourself an admin
+
+Sign up on the site first, then in Atlas: **Database → Browse Collections →
+donutmarket → users**, find your document, change `"role": "trader"` to
+`"role": "admin"`, and save. Reload `/pages/admin.html`.
+
+Or just run `npm run seed:reset`, which creates `admin@donut.market`.
+
+---
+
+## Deploying to a free host
+
+The Express server serves the frontend too, so one service runs the whole site.
+
+**Render** (or Railway, Fly, anything similar):
+
+| Setting | Value |
+| --- | --- |
+| Root directory | `backend` |
+| Build command | `npm install` |
+| Start command | `npm start` |
+| Environment | `MONGODB_URI`, `JWT_SECRET` |
+
+Notes that matter on a free tier:
+
+- **The instance sleeps.** Free hosts suspend a service that hasn't had traffic
+  for a while, and the next request waits 30–60 seconds for it to wake. The
+  site handles this: any request still running after six seconds shows a
+  "waking the exchange up" notice instead of looking broken. If a page seems to
+  hang on first load, that's what's happening.
+- **The market doesn't stop while it sleeps.** Prices advance lazily from the
+  tick grid, so when the server wakes it catches up to exactly the path it
+  would have taken had it been running the whole time. No worker needed.
+- **Redeploy after pulling changes.** The host runs whatever commit it last
+  built — a fixed bug locally is still broken in production until you push and
+  it rebuilds.
+- **Dev dependencies are skipped.** Hosts set `NODE_ENV=production`, so the
+  in-memory database used by `dev:memory` isn't installed there, and its
+  binary download is disabled in `package.json` regardless.
+- **Storage.** Minute candles expire after 45 days automatically, and equity
+  snapshots after a year, so an M0 cluster won't fill up.
+
+---
+
+## Running the exchange
+
+The admin console (`/pages/admin.html`) is where the market gets managed.
+Every endpoint behind it re-checks your role server-side.
+
+- **Listings** — list a company, tune its volatility, beta, drift, news
+  intensity and average daily volume, mark a price by hand, or halt trading.
+  A halt is a real circuit breaker: quotes freeze and orders are rejected.
+- **News wire** — publish a headline, optionally with a price shock. The shock
+  moves fair value along with the price, so it sticks instead of being pulled
+  straight back by mean reversion.
+- **Exchange rules** — starting balance, commission and fees, per-order and
+  per-position limits, extended-hours trading, and the trading calendar.
+  Switching the calendar to **24/7** makes the market always open, which is
+  worth doing if you'd rather people could play on a Sunday.
+
+---
+
+## Troubleshooting
+
+**"MONGODB_URI is not set"** — fill in `backend/.env`, or run
+`npm run dev:memory` to skip the database entirely.
+
+**Pages load but every panel is empty** — the API isn't reachable. Check
+<http://localhost:3000/api/health>; it reports whether the database is
+connected.
+
+**"The market is closed"** — it probably is. The exchange runs the NYSE
+calendar by default. Check the chip in the header for the next open, or switch
+the calendar to 24/7 in the admin console.
+
+**Nothing moves and volume is zero** — same thing. Prices only advance while
+the market is open; that's the point.
+
+**Orders rejected with "not enough buying power" when you clearly have cash** —
+resting limit orders reserve their cash. Cancel them, or check the reserved
+figure on the portfolio page.
+
+**Port 3000 already in use** — something else is on it. Run with a different
+port: `PORT=3001 npm run dev:memory`.
+
+**Debugging order matching** — set `DM_DEBUG_ORDERS=1` and the server logs
+every settlement pass: which orders it looked at, and whether each triggered.

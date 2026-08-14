@@ -78,3 +78,101 @@ no rewrite.
   presented as real market data).
 - Consider trimming old `PriceHistory` records on a schedule if the collection
   grows large over a long period of live use.
+
+---
+
+# v2 — A real market simulator
+
+The previous version moved prices with a random walk plus a nudge proportional
+to order size. This release replaces the whole market model, the trading
+mechanics and the frontend. The stack is unchanged: HTML/CSS/JS frontend,
+Node + Express, MongoDB + Mongoose, one process serving both.
+
+## The simulation engine (new: `backend/engine/`)
+
+Pure, deterministic, dependency-free modules, unit tested with `npm test`.
+
+- **`rng.js`** — seeded hash-based randomness. Every draw is a pure function of
+  (stream, tick, salt), which is what makes the whole market reproducible.
+- **`calendar.js`** — the NYSE calendar in America/New_York: pre-market from
+  4:00, regular hours 9:30–16:00, after-hours to 20:00, weekends, computed
+  holidays (including Good Friday via the Gregorian Easter algorithm and
+  weekend-observance shifting) and 1pm half-days. Also the 5-second tick grid
+  the whole simulation is defined on. An admin can switch the exchange to 24/7.
+- **`price.js`** — a multi-factor price process replacing the random walk:
+  a market factor with its own slow drift regime, sector factors, idiosyncratic
+  noise, volatility clustering via smooth value noise, mean reversion to a
+  compounding fair value, jump diffusion for news, and an overnight gap that
+  releases the variance accumulated while the market was shut. Emits 1-minute
+  OHLCV candles as it advances, and can deterministically backfill history for
+  a brand-new listing.
+- **`book.js`** — market microstructure: a two-sided quote with a depth ladder,
+  spreads that scale with volatility, liquidity and session; market orders that
+  walk the book for a volume-weighted fill; square-root price impact
+  (`σ·√(Q/ADV)`) split into permanent and decaying components; and the fee
+  schedule.
+- **`news.js`** — turns each jump the price process produces into a headline
+  from the same deterministic draw, so the wire and the chart always agree.
+
+## Lazy, worker-free advancement
+
+Prices advance on read: whichever request looks at a company moves its clock,
+and because the path is pure it computes exactly what a cron job would have.
+This survives free hosts suspending idle processes. Concurrent readers are
+resolved with an optimistic claim on `sim.tick` so volume is never double
+counted.
+
+## Trading
+
+- **Order types**: market, limit, stop and stop-limit, day or GTC. Previously
+  only immediate market orders existed.
+- **Resting orders** are matched against the candles the engine produced, so a
+  limit fills if the market genuinely traded through it, with price improvement
+  when the market gapped past it. Settlement runs on every sync, not only when
+  new candles appear.
+- **Reservations**: resting buys reserve cash and resting sells reserve shares,
+  so buying power reflects what's actually spendable.
+- **Costs**: commission with a floor plus a sell-side regulatory fee, folded
+  into cost basis so P&L is net.
+- **Risk limits**: per-order notional cap and per-position concentration cap.
+- **Extended hours** accept limit orders only, as real brokers do.
+- Trades run in a MongoDB transaction where the deployment supports one, with a
+  loud warning and a non-transactional fallback where it doesn't.
+
+## Data model
+
+- `Company` now carries simulation state (`sim`) and per-company parameters
+  (volatility, beta, drift, mean reversion, jump intensity, ADV), plus shares
+  outstanding for market cap and index weight.
+- New `Candle` (1-minute OHLCV, 45-day TTL), `Order`, and `EquitySnapshot`
+  (the portfolio's equity curve) collections.
+- `Trade` records the reference quote, realised slippage, fees and realised P&L.
+- `MarketEvent` is keyed by the tick that produced it, so re-advancing time
+  can't double-post a story.
+- `PriceHistory` was removed — candles supersede it.
+
+## API
+
+Replaced `POST /api/trade` with `/api/orders` (preview, place, list, cancel).
+Added `/api/market/*` (status, index, movers, news, public tape),
+`/api/companies/:t/candles` at five timeframes, `/api/companies/quotes` for
+polling, and richer portfolio, leaderboard, stats and admin endpoints.
+
+## Frontend
+
+Rewritten. New design system with light and dark themes, a hand-written
+canvas charting module (candlesticks, volume, crosshair, index-spaced x-axis so
+closed sessions take no width), a per-company **trading terminal** with order
+book, time and sales and an order ticket that prices the order before you send
+it, a rebuilt market board, a portfolio with equity curve and allocation, and
+an admin console for running the exchange. Navigation and footer are rendered
+from one shared module instead of being copy-pasted across pages.
+
+## Operations
+
+- `npm run dev:memory` runs the entire app against a throwaway in-memory
+  MongoDB replica set with no configuration at all.
+- `npm test` runs the engine test suite.
+- Security headers and a content-security policy; no inline scripts.
+- Free-host awareness: a request still running after six seconds shows a
+  "waking up" notice rather than an error.

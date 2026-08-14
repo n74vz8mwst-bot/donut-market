@@ -1,7 +1,7 @@
 {
   "name": "donut-market-backend",
   "version": "1.0.0",
-  "description": "Donut Market API - Express + MongoDB backend",
+  "description": "Donut Market API — Express + MongoDB, with a deterministic market simulation engine",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -26,5 +26,10 @@
   "devDependencies": {
     "mongodb-memory-server": "^11.2.0",
     "nodemon": "^3.1.14"
+  },
+  "config": {
+    "mongodbMemoryServer": {
+      "disablePostinstall": "1"
+    }
   }
 }

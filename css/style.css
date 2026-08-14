@@ -1051,6 +1051,12 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spac
   position: relative;
   z-index: 90;
 }
+/* "The server is waking up" is news, not a failure — don't paint it red. */
+.banner-info {
+  background: var(--surface-2);
+  border-bottom-color: var(--border);
+  color: var(--ink-2);
+}
 
 /* --------------------------------------------------------------------------
    AUTH

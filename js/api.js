@@ -15,13 +15,27 @@ const DM_API = (() => {
   const clearToken = () => localStorage.removeItem(TOKEN_KEY);
   const isLoggedIn = () => Boolean(getToken());
 
+  // Free hosting (Render, Railway, Fly) suspends an idle instance and takes
+  // the better part of a minute to wake it up again. That looks identical to
+  // "the site is broken" unless we say something, so a request that's still
+  // running after this long announces itself and the shell shows a notice.
+  const SLOW_MS = 6000;
+  const TIMEOUT_MS = 60000;
+
   async function request(path, options = {}) {
+    const controller = new AbortController();
+    const abort = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const slow = setTimeout(() => document.dispatchEvent(new CustomEvent('dm:slow')), SLOW_MS);
+
     try {
       const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
       const token = getToken();
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      const res = await fetch(path, { ...options, headers });
+      const res = await fetch(path, { ...options, headers, signal: controller.signal });
+      clearTimeout(slow);
+      clearTimeout(abort);
+      document.dispatchEvent(new CustomEvent('dm:responsive'));
 
       let body = null;
       try { body = await res.json(); } catch (_e) { /* empty body is fine */ }
@@ -36,8 +50,14 @@ const DM_API = (() => {
         return { data: null, error: { message: (body && body.error) || res.statusText || 'Request failed.', status: res.status } };
       }
       return { data: body, error: null };
-    } catch (_err) {
-      return { data: null, error: { message: "Can't reach the exchange — is the server running?", status: 0 } };
+    } catch (err) {
+      clearTimeout(slow);
+      clearTimeout(abort);
+      const message =
+        err.name === 'AbortError'
+          ? 'The exchange took too long to answer. If it’s on free hosting it may still be waking up — try again in a moment.'
+          : "Can't reach the exchange — is the server running?";
+      return { data: null, error: { message, status: 0 } };
     }
   }
 
