@@ -6,6 +6,7 @@ const path = require("path");
 
 const { optionalAuth } = require("./middleware/auth");
 const { detectTransactionSupport } = require("./services/db");
+const migrate = require("./services/migrate");
 
 const authRoutes = require("./routes/auth");
 const companyRoutes = require("./routes/companies");
@@ -85,15 +86,26 @@ app.use(
   express.static(frontendRoot, {
     extensions: ["html"],
     setHeaders(res, filePath) {
-      // HTML is re-fetched every time; hashed-free assets get a short cache so
-      // an edit shows up on refresh instead of hours later.
-      res.setHeader("Cache-Control", filePath.endsWith(".html") ? "no-cache" : "public, max-age=300");
+      // None of these filenames are content-hashed, so a cached copy after a
+      // deploy is a stale copy — and "the fix didn't work" is almost always
+      // that. `no-cache` still allows a conditional request, so unchanged
+      // files come back as a cheap 304 rather than a full download.
+      const revalidate = /\.(html|js|css)$/.test(filePath);
+      res.setHeader("Cache-Control", revalidate ? "no-cache" : "public, max-age=3600");
     },
   })
 );
 
-// Anything else that isn't a real file: send the homepage.
-app.use((_req, res) => res.sendFile(path.join(frontendRoot, "index.html")));
+// Anything else that isn't a real file: send the homepage — but only to a
+// browser asking for a page. A missing script or stylesheet must 404 rather
+// than quietly receive HTML with a 200, which fails later and much less
+// obviously (and is a miserable thing to debug after a deploy).
+app.use((req, res) => {
+  if (req.method === "GET" && req.accepts("html") && !path.extname(req.path)) {
+    return res.sendFile(path.join(frontendRoot, "index.html"));
+  }
+  res.status(404).type("text/plain").send("Not found.");
+});
 
 // Last-resort error handler, so a thrown error is JSON rather than an HTML
 // stack trace leaking file paths to the browser.
@@ -119,9 +131,13 @@ async function start() {
   }
 
   try {
-    await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 15000 });
+    // autoIndex is off because Mongoose's automatic build can't change the
+    // options on an index that already exists — migrate.run() below uses
+    // syncIndexes(), which can.
+    await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 15000, autoIndex: false });
     console.log("✅ Connected to MongoDB.");
     await detectTransactionSupport();
+    await migrate.run();
 
     const server = app.listen(PORT, () => {
       console.log(`🚀 Donut Market running on http://localhost:${PORT}`);

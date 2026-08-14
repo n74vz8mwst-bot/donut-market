@@ -176,3 +176,30 @@ from one shared module instead of being copy-pasted across pages.
 - Security headers and a content-security policy; no inline scripts.
 - Free-host awareness: a request still running after six seconds shows a
   "waking up" notice rather than an error.
+
+## Upgrading a live database (fix)
+
+The engine rewrite was verified against a freshly seeded database, which hid a
+breaking change: companies created by the previous version have no `sim` state,
+and every market read path starts from it. On an existing deployment that threw
+on `/api/leaderboard`, `/api/companies`, `/api/stats` and `/api/market/*` — most
+of the site at once.
+
+- `services/market.js#ensureSim` repairs a pre-engine company in place on first
+  read, initialising simulation state from its stored price and filling in the
+  fields added since (`sharesOutstanding`, `listedAt`, `openPrice`).
+- `services/migrate.js` runs on startup: `syncIndexes()` on every model (which,
+  unlike Mongoose's automatic build, can change the options on an index that
+  already exists), then repairs any stale companies and backfills a chart for
+  tickers that have no candles, so upgraded listings don't show empty panels.
+- `Company.sim` is no longer `required`, so a legacy document can be loaded and
+  saved while it's being repaired.
+- The `MarketEvent` uniqueness constraint is now partial (`tick` must be a
+  number) rather than sparse. A sparse compound index stored admin-published
+  headlines as `tick: null`, so a second manual headline about the same company
+  collided with the first.
+- Missing static assets now return 404 instead of the homepage with a 200,
+  and HTML/JS/CSS are served `no-cache`, so a deploy isn't shadowed by a stale
+  cached copy.
+- `backend/test/migration.test.js` builds a database in the old shape — raw
+  documents inserted underneath Mongoose — and covers all of the above.

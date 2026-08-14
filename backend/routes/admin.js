@@ -190,6 +190,7 @@ router.patch("/companies/:ticker/status", async (req, res) => {
     }
     const company = await Company.findOne({ ticker: req.params.ticker.toLowerCase() });
     if (!company) return res.status(404).json({ error: "Company not found." });
+    await market.ensureSim(company);
 
     // Resuming from a halt: skip the clock past the halt instead of releasing
     // all the price movement that "would have" happened while it was frozen.
@@ -210,6 +211,7 @@ router.patch("/companies/:ticker/toggle", async (req, res) => {
   try {
     const company = await Company.findOne({ ticker: req.params.ticker.toLowerCase() });
     if (!company) return res.status(404).json({ error: "Company not found." });
+    await market.ensureSim(company);
     if (company.status !== "open") company.sim.tick = cal.tickAt(Date.now() - 1);
     company.status = company.status === "open" ? "halted" : "open";
     await company.save();
@@ -338,7 +340,7 @@ router.patch("/users/:id/role", async (req, res) => {
       const admins = await User.countDocuments({ role: "admin" });
       if (admins <= 1) return res.status(400).json({ error: "You're the only admin — promote someone else first." });
     }
-    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true });
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { returnDocument: "after" });
     if (!user) return res.status(404).json({ error: "User not found." });
     res.json(user.toJSON());
   } catch (err) {
@@ -445,6 +447,7 @@ router.delete("/companies/:ticker/history", async (req, res) => {
   try {
     const company = await Company.findOne({ ticker: req.params.ticker.toLowerCase() });
     if (!company) return res.status(404).json({ error: "Company not found." });
+    await market.ensureSim(company);
 
     await Candle.deleteMany({ ticker: company.ticker });
     const now = Date.now();

@@ -24,8 +24,19 @@ const marketEventSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Idempotency for engine-generated stories: one event per ticker per tick.
-marketEventSchema.index({ companyId: 1, tick: 1 }, { unique: true, sparse: true });
+// Idempotency for engine-generated stories: one event per ticker per tick, so
+// re-advancing the same stretch of time can't file the same story twice.
+//
+// The uniqueness is deliberately *partial* rather than sparse. Admin-published
+// headlines have no tick, and a sparse compound index still indexes those as
+// tick:null — which would make a second manual headline about the same company
+// collide with the first. Restricting the constraint to documents that
+// actually carry a numeric tick keeps engine events idempotent while leaving
+// admins free to publish as much as they like.
+marketEventSchema.index(
+  { companyId: 1, tick: 1 },
+  { unique: true, partialFilterExpression: { tick: { $type: "number" } } }
+);
 marketEventSchema.index({ at: -1 });
 
 marketEventSchema.set("toJSON", {

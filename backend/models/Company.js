@@ -59,7 +59,10 @@ const companySchema = new mongoose.Schema(
     // closed — permanently delisted from trading but still visible
     status: { type: String, enum: ["open", "halted", "closed"], default: "open" },
 
-    sim: { type: simSchema, required: true },
+    // Deliberately not `required`: a database created before the simulation
+    // engine existed has companies without it, and those documents still have
+    // to load (and save) so services/market.js#ensureSim can repair them.
+    sim: { type: simSchema, default: null },
     params: { type: paramsSchema, default: () => ({}) },
   },
   { timestamps: true }

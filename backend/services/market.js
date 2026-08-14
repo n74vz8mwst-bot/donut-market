@@ -58,6 +58,49 @@ function liveVol(company, params, tick) {
 }
 
 /**
+ * Brings a company document up to the current schema.
+ *
+ * A database that predates the simulation engine has companies with no `sim`
+ * state at all — and every read path here starts from `sim.tick`. Rather than
+ * make an upgrade depend on someone remembering to re-run the seed script on
+ * the production host, any company that turns up without simulation state gets
+ * one initialised from its last known price, in place, on first read.
+ *
+ * Returns true if the document had to be repaired.
+ */
+async function ensureSim(company, options = {}) {
+  const now = options.now || Date.now();
+  const session = options.session || null;
+  const patch = {};
+
+  if (!company.sim || company.sim.tick == null || !Number.isFinite(company.sim.logPrice)) {
+    const startPrice = Math.max(Number(company.price) || Number(company.openPrice) || 1, 0.0001);
+    company.sim = price.initSim({ price: startPrice }, now);
+    patch.sim = company.sim;
+  }
+  // Fields introduced alongside the engine. Missing on legacy documents, and
+  // market cap / index weights read as NaN without them.
+  if (!Number.isFinite(company.sharesOutstanding) || company.sharesOutstanding <= 0) {
+    company.sharesOutstanding = 1000000;
+    patch.sharesOutstanding = company.sharesOutstanding;
+  }
+  if (!Number.isFinite(company.openPrice) || company.openPrice <= 0) {
+    company.openPrice = company.price;
+    patch.openPrice = company.openPrice;
+  }
+  if (!company.listedAt) {
+    company.listedAt = company.createdAt || new Date(now);
+    patch.listedAt = company.listedAt;
+  }
+
+  if (!Object.keys(patch).length) return false;
+
+  await Company.updateOne({ _id: company._id }, { $set: patch }, sessionOpts(session));
+  console.log(`↻ ${company.ticker}: upgraded to the simulation engine (${Object.keys(patch).join(", ")}).`);
+  return true;
+}
+
+/**
  * Advances one company to `now`, persisting the candles and news it passed
  * through. Safe to call from anywhere, as often as you like.
  *
@@ -67,6 +110,8 @@ async function advanceCompany(company, options = {}) {
   const now = options.now || Date.now();
   const settings = options.settings || (await settingsService.get());
   const session = options.session || null;
+
+  await ensureSim(company, { now, session });
 
   // Halted and delisted names don't move. A halt is a real circuit breaker:
   // the clock catches up so the price doesn't leap when trading resumes.
@@ -169,6 +214,10 @@ async function advanceAll(companies, options = {}) {
 function quoteFor(company, options = {}) {
   const now = options.now || Date.now();
   const settings = options.settings || {};
+  // Defensive: a caller may hand us a company straight from the database
+  // without syncing it first (the tape, the admin console). Never let a
+  // half-migrated document take down a whole listing page.
+  if (!company.sim) company.sim = price.initSim({ price: company.price }, now);
   const sessionInfo = cal.sessionAt(now, settings.marketMode || "exchange");
   const params = paramsFor(company);
   const tick = cal.tickAt(now);
@@ -369,6 +418,7 @@ module.exports = {
   TIMEFRAMES,
   paramsFor,
   liveVol,
+  ensureSim,
   advanceCompany,
   advanceAll,
   quoteFor,

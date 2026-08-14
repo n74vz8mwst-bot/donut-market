@@ -145,10 +145,37 @@ Every endpoint behind it re-checks your role server-side.
 
 ---
 
+## Upgrading an existing database
+
+If your database predates the simulation engine, its companies have no
+simulation state and none of the new fields. **You don't have to do anything**:
+on boot the server brings the indexes in line with the schemas, gives every
+old company simulation state initialised from its current price, and backfills
+a chart for any ticker that has no candles. Anything it misses is repaired
+lazily the first time that company is read.
+
+The startup log tells you what happened:
+
+```
+↻ Upgrading 8 companies from the pre-engine schema…
+↻ dnut: upgraded to the simulation engine (sim).
+↻ dnut: backfilled 4000 candles.
+```
+
+Prices, balances, holdings and trade history are all preserved. The old
+`priceHistory` collection is left untouched — candles replace it, and you can
+drop it whenever you like.
+
 ## Troubleshooting
 
 **"MONGODB_URI is not set"** — fill in `backend/.env`, or run
 `npm run dev:memory` to skip the database entirely.
+
+**The leaderboard, market board and stats all fail at once after an upgrade** —
+this was a real bug: companies created by the pre-engine version had no
+simulation state, and every market endpoint read it. Fixed — the server now
+repairs those documents itself. If you're seeing it, you're running a build
+from before the fix; redeploy.
 
 **Pages load but every panel is empty** — the API isn't reachable. Check
 <http://localhost:3000/api/health>; it reports whether the database is

@@ -84,7 +84,11 @@ router.post("/login", async (req, res) => {
 
 router.get("/me", requireAuth, async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.userId, { lastSeenAt: new Date() }, { new: true });
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { lastSeenAt: new Date() },
+      { returnDocument: "after" }
+    );
     if (!user) return res.status(404).json({ error: "User not found." });
     res.json(user.toJSON());
   } catch (err) {
