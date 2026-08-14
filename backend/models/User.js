@@ -18,6 +18,10 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     balance: { type: Number, required: true, default: 10000 },
+    // Whatever the starting-balance setting was when this account was
+    // created — kept per-user so leaderboard profit % stays accurate for
+    // everyone even after an admin changes the setting for future signups.
+    startingBalance: { type: Number, required: true, default: 10000 },
     role: { type: String, enum: ["trader", "admin"], default: "trader" },
     holdings: { type: [holdingSchema], default: [] },
   },

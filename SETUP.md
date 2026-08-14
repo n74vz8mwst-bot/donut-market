@@ -86,34 +86,64 @@ environment variables, deploy.
 ## 5. What's already wired up
 
 - **Signup/Login** — real accounts, passwords hashed with bcrypt, JWT session
-  stored in the browser (`pages/login.html`).
+  stored in the browser (`pages/login.html`). New accounts start with the
+  admin-configured starting balance (see below).
 - **Trading** — `POST /api/trade` moves each company's price based on the
   size of the order relative to its `liquidity` value (bigger orders move
   price more), capped at 25% per single trade so nothing breaks. This runs
   inside a MongoDB transaction so balance, holdings, price, and the trade log
   all update together or not at all.
+- **Live market movement** — companies also drift on their own between
+  trades. Each time a company's price is read, any elapsed time since it was
+  last updated is turned into small random ticks with a gentle pull back
+  toward its listing price (thinner/low-liquidity companies swing more). This
+  is a lazy on-read model — no background worker or cron needed, so it works
+  on a free host that sleeps. See `backend/utils/marketDrift.js`.
+- **Real price history & charts** — every price change (trade, drift, admin
+  edit, news event) is recorded in a `PriceHistory` collection, so the
+  sparklines on stock cards show the company's actual recorded prices. A
+  brand-new company with no history yet shows an honest flat line rather than
+  invented movement.
+- **Real homepage stats** — the four stat cards on the landing page
+  (`GET /api/stats`) are computed live from the database: total Donut Coins
+  in circulation, companies listed, active traders (traded in the last 7
+  days), and trades today. No hardcoded numbers.
 - **Leaderboard** — `GET /api/leaderboard` ranks every trader by balance +
-  live holdings value, shared across everyone.
+  live holdings value, shared across everyone. Profit % is measured against
+  each trader's own starting balance.
 - **Admin panel** (`pages/admin.html`) — create companies, edit prices,
-  open/close markets, publish news events that move a stock's price, and
-  promote/demote traders. Every admin route re-checks your role server-side.
+  open/close markets, publish news events that move a stock's price, promote/
+  demote traders, **edit any trader's balance** (set an exact amount or
+  add/subtract a delta), and **set the starting balance** handed to new
+  traders. Every admin route re-checks your role server-side.
 
 ## 6. Where things live
 
 ```
 backend/
   server.js          — Express app, serves the frontend + mounts /api routes
-  models/             — Mongoose schemas (User, Company, Trade, MarketEvent)
-  middleware/auth.js   — JWT verification, requireAuth / requireAdmin
-  routes/              — auth, companies, trade, portfolio, leaderboard, admin
-  seed.js              — populates the 8 starting companies (run once)
+  models/            — Mongoose schemas (User, Company, Trade, MarketEvent,
+                       PriceHistory, Settings)
+  middleware/auth.js — JWT verification, requireAuth / requireAdmin
+  routes/            — auth, companies, trade, portfolio, leaderboard, admin, stats
+  utils/marketDrift.js — ambient between-trade price movement
+  seed.js            — populates the 8 starting companies (run once)
 
 js/api.js       — frontend's connection to your backend (fetch + JWT)
-js/live.js      — maps live company/leaderboard data into the existing UI
+js/live.js      — maps live company/leaderboard/stats data into the existing UI
+js/main.js      — shared rendering (stock cards, sparklines, counters, banners)
 js/trade-modal.js — the Buy/Sell popup used on the market and portfolio pages
 js/auth-ui.js   — swaps the navbar's Login button for your balance once logged in
 ```
 
-If the backend isn't running or isn't reachable, every page quietly falls
-back to the original demo data so the site never looks broken — you'll just
-see a note in the browser console.
+If the backend isn't running or isn't reachable, each page shows a visible
+error banner (with a Retry button) rather than silently displaying fake data —
+so a broken connection is never mistaken for a real, working market.
+
+## 7. A note on "realism"
+
+Because charts, stats, and the "active traders" count are now backed by real
+recorded data, they start out sparse right after your first deploy and fill in
+naturally as the market runs and people trade. That's the intended trade-off of
+removing the old demo numbers — everything you see is real, even when that means
+starting small.

@@ -10,6 +10,9 @@ const companySchema = new mongoose.Schema(
     openPrice: { type: Number, required: true }, // price at listing — used to show lifetime % change
     liquidity: { type: Number, required: true, default: 5000, min: 1 }, // higher = less sensitive to trades
     status: { type: String, enum: ["open", "closed"], default: "open" },
+    // Last time ambient market drift was applied to this company — see
+    // backend/utils/marketDrift.js. Internal bookkeeping, hidden from the API.
+    lastTickAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
@@ -22,6 +25,7 @@ companySchema.set("toJSON", {
     ret.id = ret.ticker;
     ret.open_price = ret.openPrice;
     delete ret.openPrice;
+    delete ret.lastTickAt;
     delete ret._id;
     delete ret.__v;
     return ret;

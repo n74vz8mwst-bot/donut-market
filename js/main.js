@@ -7,35 +7,19 @@
 const DM = (() => {
 
   /* ------------------------------------------------------------------------
-     MOCK DATA
-     This is the single source of truth for the prototype. Swap `getCompanies`,
-     `getLeaderboard`, etc. for real fetch() calls when the backend exists —
-     everything downstream (rendering, sparklines) already reads from here.
+     DEFAULT DATA
+     The app is fully backed by the Express/MongoDB API now (see js/live.js).
+     These empty defaults exist only so the render helpers below have a safe
+     fallback if called with no argument — real data is always passed in
+     explicitly by each page. No fake/demo values live here anymore.
   ------------------------------------------------------------------------ */
-  const companies = [
-    { id: 'dnut', name: 'Donut Corp',      icon: '🍩', price: 250.40, change: 4.5,  status: 'open',   sector: 'Bakery Tech' },
-    { id: 'glz',  name: 'Glaze Dynamics',  icon: '🧁', price: 118.75, change: -2.1, status: 'open',   sector: 'Consumer' },
-    { id: 'sprk', name: 'Sprinkle Systems',icon: '✨', price: 74.20,  change: 8.9,  status: 'open',   sector: 'Tech' },
-    { id: 'krsp', name: 'Krispy Holdings', icon: '🍪', price: 340.10, change: 1.2,  status: 'open',   sector: 'Bakery Tech' },
-    { id: 'jlly', name: 'Jelly Filled Inc',icon: '🍮', price: 52.60,  change: -0.8, status: 'closed', sector: 'Consumer' },
-    { id: 'frst', name: 'Frosting Freight',icon: '🚚', price: 29.90,  change: 3.3,  status: 'open',   sector: 'Logistics' },
-    { id: 'chz',  name: 'Choco Zaibatsu',  icon: '🍫', price: 501.00, change: 6.7,  status: 'open',   sector: 'Conglomerate' },
-    { id: 'mplg', name: 'Maple Glow Co.',  icon: '🍁', price: 88.30,  change: -3.4, status: 'closed', sector: 'Consumer' },
-  ];
-
-  const leaderboard = [
-    { rank: 1, name: 'GlazeGoblin',  tag: '@glazegoblin',  balance: 482_300, profit: 312.4 },
-    { rank: 2, name: 'DonutDuchess', tag: '@donutduchess', balance: 401_150, profit: 267.8 },
-    { rank: 3, name: 'SprinkleKing', tag: '@sprinkleking', balance: 355_920, profit: 198.5 },
-    { rank: 4, name: 'BullishBaker', tag: '@bullishbaker', balance: 290_610, profit: 142.1 },
-    { rank: 5, name: 'FryerFinance', tag: '@fryerfinance', balance: 244_050, profit: 97.6 },
-  ];
-
+  const companies = [];
+  const leaderboard = [];
   const stats = {
-    totalCoins: 48_290_500,
-    companiesListed: companies.length,
-    activeTraders: 12_842,
-    tradesToday: 5_931,
+    totalCoins: 0,
+    companiesListed: 0,
+    activeTraders: 0,
+    tradesToday: 0,
   };
 
   /* ------------------------------------------------------------------------

@@ -4,6 +4,7 @@ const Company = require("../models/Company");
 const User = require("../models/User");
 const Trade = require("../models/Trade");
 const PriceHistory = require("../models/PriceHistory");
+const { applyDrift } = require("../utils/marketDrift");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
@@ -32,6 +33,9 @@ router.post("/", requireAuth, async (req, res) => {
       if (company.status !== "open") {
         throw Object.assign(new Error(`${company.name} is currently closed for trading.`), { status: 400 });
       }
+      // Catch the price up on any ambient drift it's earned since it was
+      // last read, so the trade fills at what's actually the current price.
+      await applyDrift(company, session);
 
       const user = await User.findById(req.userId).session(session);
       if (!user) throw Object.assign(new Error("User not found."), { status: 404 });

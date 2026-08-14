@@ -3,6 +3,7 @@ const Company = require("../models/Company");
 const User = require("../models/User");
 const MarketEvent = require("../models/MarketEvent");
 const PriceHistory = require("../models/PriceHistory");
+const Settings = require("../models/Settings");
 const { requireAdmin } = require("../middleware/auth");
 
 const router = express.Router();
@@ -162,6 +163,34 @@ router.patch("/users/:id/balance", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Could not update balance." });
+  }
+});
+
+// Market-wide settings — currently just the starting balance handed to new
+// traders on signup. See models/Settings.js and routes/auth.js.
+router.get("/settings", async (_req, res) => {
+  try {
+    const settings = await Settings.getSingleton();
+    res.json({ startingBalance: settings.startingBalance });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Could not load settings." });
+  }
+});
+
+router.patch("/settings", async (req, res) => {
+  try {
+    const { startingBalance } = req.body;
+    if (typeof startingBalance !== "number" || startingBalance < 0) {
+      return res.status(400).json({ error: "Starting balance must be a non-negative number." });
+    }
+    const settings = await Settings.getSingleton();
+    settings.startingBalance = startingBalance;
+    await settings.save();
+    res.json({ startingBalance: settings.startingBalance });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Could not update settings." });
   }
 });
 

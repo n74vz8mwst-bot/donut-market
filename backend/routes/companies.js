@@ -1,12 +1,16 @@
 const express = require("express");
 const Company = require("../models/Company");
 const PriceHistory = require("../models/PriceHistory");
+const { applyDrift } = require("../utils/marketDrift");
 
 const router = express.Router();
 
 router.get("/", async (_req, res) => {
   try {
     const companies = await Company.find().sort({ name: 1 });
+    // Catch each company up on any ambient drift it's earned since it was
+    // last read — see backend/utils/marketDrift.js.
+    await Promise.all(companies.map((c) => applyDrift(c)));
     res.json(companies.map((c) => c.toJSON()));
   } catch (err) {
     console.error(err);
@@ -22,7 +26,10 @@ router.get("/", async (_req, res) => {
 router.get("/history/all", async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 30, 200);
-    const companies = await Company.find().select("ticker price");
+    const companies = await Company.find().select("ticker price liquidity openPrice status lastTickAt createdAt");
+    // Catch up ambient drift first so the sparkline's latest point matches
+    // what GET /api/companies would report right now.
+    await Promise.all(companies.map((c) => applyDrift(c)));
 
     const results = await Promise.all(
       companies.map(async (c) => {
@@ -46,6 +53,7 @@ router.get("/:ticker", async (req, res) => {
   try {
     const company = await Company.findOne({ ticker: req.params.ticker.toLowerCase() });
     if (!company) return res.status(404).json({ error: "Company not found." });
+    await applyDrift(company);
     res.json(company.toJSON());
   } catch (err) {
     console.error(err);

@@ -183,6 +183,17 @@ const DM_DB = (() => {
     return request("/api/admin/events");
   }
 
+  async function adminGetSettings() {
+    return request("/api/admin/settings");
+  }
+
+  async function adminUpdateSettings(settings) {
+    return request("/api/admin/settings", {
+      method: "PATCH",
+      body: JSON.stringify(settings),
+    });
+  }
+
   return {
     isConfigured,
     signUp, signIn, signOut, getSession, onAuthStateChange,
@@ -190,6 +201,7 @@ const DM_DB = (() => {
     getCompanies, getCompaniesHistory, getStats, getMyHoldings, getMyTrades, executeTrade, getLeaderboard, subscribeToCompanies,
     adminSetPrice, adminCreateCompany, adminToggleStatus, adminPublishEvent,
     adminGetUsers, adminSetRole, adminSetBalance, adminAdjustBalance, adminGetEvents,
+    adminGetSettings, adminUpdateSettings,
   };
 })();
 

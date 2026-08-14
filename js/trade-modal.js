@@ -2,8 +2,9 @@
    DONUT MARKET — trade-modal.js
    A single reusable Buy/Sell dialog. Any page can call:
      DM_TRADE.open({ id, name, icon, price }, 'buy' | 'sell')
-   It talks to execute_trade() in Supabase, which is the only place prices
-   and balances actually change — driven entirely by order size vs. demand.
+   It posts to /api/trade on the Express/MongoDB backend, which is the only
+   place prices and balances actually change — driven by order size vs. the
+   company's liquidity, inside a DB transaction.
    ========================================================================== */
 
 const DM_TRADE = (() => {

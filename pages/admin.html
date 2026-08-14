@@ -169,12 +169,13 @@
               <div class="form-group">
                 <label for="starting-balance">Starting balance for new traders (DC)</label>
                 <input type="text" id="starting-balance" value="10000" />
+                <small style="color:var(--ink-30);display:block;margin-top:6px;">Applies to accounts created from now on. Existing traders keep their own starting balance.</small>
               </div>
               <div class="form-group">
                 <label for="market-hours">Market hours</label>
-                <input type="text" id="market-hours" value="24/7 — always open" />
+                <input type="text" id="market-hours" value="24/7 — always open" disabled style="opacity:0.6;" />
               </div>
-              <button class="btn btn-primary" onclick="DM.openToast('Settings saved (preview only).')">Save settings</button>
+              <button class="btn btn-primary" id="save-settings-btn">Save settings</button>
             </div>
 
           </div>
@@ -345,6 +346,27 @@
       });
     });
 
+    async function loadSettings() {
+      const { data, error } = await DM_DB.adminGetSettings();
+      if (error || !data) return;
+      document.getElementById('starting-balance').value = DM.formatNumber(data.startingBalance);
+    }
+
+    document.getElementById('save-settings-btn')?.addEventListener('click', async () => {
+      const raw = document.getElementById('starting-balance').value.replace(/[, ]/g, '');
+      const startingBalance = parseFloat(raw);
+      if (isNaN(startingBalance) || startingBalance < 0) {
+        return DM.openToast('Enter a valid non-negative starting balance.');
+      }
+      const { data, error } = await DM_DB.adminUpdateSettings({ startingBalance });
+      if (error) {
+        DM.openToast(error.message);
+      } else {
+        document.getElementById('starting-balance').value = DM.formatNumber(data.startingBalance);
+        DM.openToast(`Starting balance for new traders set to ${DM.formatNumber(data.startingBalance)} DC.`);
+      }
+    });
+
     async function gateAndLoad() {
       const { data: { session } } = await DM_DB.getSession();
       if (!session) {
@@ -360,6 +382,7 @@
       renderAdminCompanies();
       renderAdminUsers();
       renderAdminEvents();
+      loadSettings();
     }
 
     gateAndLoad();

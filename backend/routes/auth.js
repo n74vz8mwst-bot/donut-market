@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Settings = require("../models/Settings");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
@@ -27,7 +28,14 @@ router.post("/signup", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ username, email, passwordHash, balance: 10000 });
+    const { startingBalance } = await Settings.getSingleton();
+    const user = await User.create({
+      username,
+      email,
+      passwordHash,
+      balance: startingBalance,
+      startingBalance,
+    });
 
     const token = signToken(user);
     res.status(201).json({ token, ...user.toJSON() });

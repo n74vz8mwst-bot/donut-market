@@ -1,8 +1,9 @@
 /* ==========================================================================
    DONUT MARKET — auth-ui.js
    Swaps the navbar's Login/Start Trading buttons for a balance pill + log out
-   once a real Supabase session exists. Runs on every page. In demo mode
-   (Supabase not configured) it does nothing, leaving the static markup as-is.
+   once a real session exists (JWT from the Express/MongoDB backend). Runs on
+   every page. If the backend isn't reachable it does nothing, leaving the
+   static markup as-is.
    ========================================================================== */
 
 const DM_AUTH_UI = (() => {
