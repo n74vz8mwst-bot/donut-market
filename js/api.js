@@ -1,208 +1,136 @@
 /* ==========================================================================
    DONUT MARKET — api.js
-   Talks to your own Express + MongoDB backend (see /backend). Since the
-   backend serves the frontend itself (see backend/server.js), API calls are
-   same-origin relative paths — no URL to configure.
-   Keeps the same DM_DB.* method names/shapes the rest of the site already
-   expects, so live.js / trade-modal.js / auth-ui.js work unchanged.
+   The only place that talks to the server.
+
+   Every call returns { data, error } rather than throwing, so callers can show
+   a real error state instead of a blank panel. Nothing in this file ever
+   invents a fallback number: if the exchange can't be reached, pages say so.
    ========================================================================== */
 
-const DM_DB = (() => {
-  const TOKEN_KEY = "dm_token";
+const DM_API = (() => {
+  const TOKEN_KEY = 'dm_token';
 
-  function getToken() { return localStorage.getItem(TOKEN_KEY); }
-  function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
-  function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+  const getToken = () => localStorage.getItem(TOKEN_KEY);
+  const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
+  const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+  const isLoggedIn = () => Boolean(getToken());
 
   async function request(path, options = {}) {
     try {
-      const headers = Object.assign({ "Content-Type": "application/json" }, options.headers || {});
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
       const token = getToken();
-      if (token) headers["Authorization"] = "Bearer " + token;
+      if (token) headers.Authorization = `Bearer ${token}`;
 
-      const res = await fetch(path, Object.assign({}, options, { headers }));
+      const res = await fetch(path, { ...options, headers });
 
       let body = null;
       try { body = await res.json(); } catch (_e) { /* empty body is fine */ }
 
+      if (res.status === 401 && token) {
+        // The token expired or was signed with a different secret — treat it
+        // as logged out rather than looping on failed authenticated calls.
+        clearToken();
+        document.dispatchEvent(new CustomEvent('dm:signed-out'));
+      }
       if (!res.ok) {
-        return { data: null, error: { message: (body && body.error) || res.statusText || "Request failed." } };
+        return { data: null, error: { message: (body && body.error) || res.statusText || 'Request failed.', status: res.status } };
       }
       return { data: body, error: null };
     } catch (_err) {
-      return { data: null, error: { message: "Can't reach the server — is the backend running?" } };
+      return { data: null, error: { message: "Can't reach the exchange — is the server running?", status: 0 } };
     }
   }
 
-  // The backend is same-origin and either reachable or not — there's no
-  // separate "configured/unconfigured" state like an external API key would
-  // need. Kept as a function so live.js / trade-modal.js don't need changes.
-  function isConfigured() { return true; }
+  const get = (path) => request(path);
+  const post = (path, body) => request(path, { method: 'POST', body: JSON.stringify(body) });
+  const patch = (path, body) => request(path, { method: 'PATCH', body: JSON.stringify(body) });
+  const del = (path) => request(path, { method: 'DELETE' });
 
-  /* ---------------------------- AUTH ---------------------------- */
+  /* ------------------------------------------------------------------ auth */
 
   async function signUp(username, email, password) {
-    const { data, error } = await request("/api/auth/signup", {
-      method: "POST",
-      body: JSON.stringify({ username, email, password }),
-    });
-    if (error) return { data: null, error };
-    setToken(data.token);
-    return { data, error: null };
+    const res = await post('/api/auth/signup', { username, email, password });
+    if (res.data && res.data.token) setToken(res.data.token);
+    return res;
   }
 
   async function signIn(email, password) {
-    const { data, error } = await request("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
-    if (error) return { data: null, error };
-    setToken(data.token);
-    return { data, error: null };
+    const res = await post('/api/auth/login', { email, password });
+    if (res.data && res.data.token) setToken(res.data.token);
+    return res;
   }
 
-  async function signOut() {
+  function signOut() {
     clearToken();
-    return { error: null };
   }
 
-  async function getSession() {
-    const token = getToken();
-    return { data: { session: token ? { token } : null } };
-  }
+  const me = () => (isLoggedIn() ? get('/api/auth/me') : Promise.resolve({ data: null, error: null }));
 
-  // No websocket/session-event stream in this simple REST backend — kept as
-  // a no-op so any page that calls it doesn't break.
-  function onAuthStateChange() {
-    return { data: { subscription: { unsubscribe() {} } } };
-  }
+  /* ------------------------------------------------------------ market data */
 
-  /* -------------------------- PROFILE -------------------------- */
+  const companies = () => get('/api/companies');
+  const company = (ticker) => get(`/api/companies/${encodeURIComponent(ticker)}`);
+  const quotes = (tickers = []) =>
+    get(`/api/companies/quotes${tickers.length ? `?tickers=${tickers.join(',')}` : ''}`);
+  const candles = (ticker, tf = '5m', limit = 240) =>
+    get(`/api/companies/${encodeURIComponent(ticker)}/candles?tf=${tf}&limit=${limit}`);
+  const companyNews = (ticker, limit = 15) =>
+    get(`/api/companies/${encodeURIComponent(ticker)}/news?limit=${limit}`);
+  const tape = (ticker) => get(`/api/companies/${encodeURIComponent(ticker)}/tape`);
 
-  async function getMyProfile() {
-    if (!getToken()) return { data: null, error: null };
-    return request("/api/auth/me");
-  }
+  const marketStatus = () => get('/api/market/status');
+  const marketIndex = (tf = '15m', limit = 96) => get(`/api/market/index?tf=${tf}&limit=${limit}`);
+  const movers = () => get('/api/market/movers');
+  const news = (limit = 20) => get(`/api/market/news?limit=${limit}`);
+  const recentTrades = (limit = 20) => get(`/api/market/trades?limit=${limit}`);
+  const stats = () => get('/api/stats');
+  const leaderboard = (limit = 100) => get(`/api/leaderboard?limit=${limit}`);
 
-  /* --------------------------- MARKET DATA --------------------------- */
+  /* ---------------------------------------------------------------- trading */
 
-  async function getCompanies() {
-    return request("/api/companies");
-  }
+  const previewOrder = (order) => post('/api/orders/preview', order);
+  const placeOrder = (order) => post('/api/orders', order);
+  const orders = (status = 'open') => get(`/api/orders?status=${status}`);
+  const cancelOrder = (id) => del(`/api/orders/${encodeURIComponent(id)}`);
 
-  // Real recorded price history for every company in one call, e.g.
-  // { dnut: [250.4, 251.1, ...] }. Used for sparklines — see js/live.js.
-  async function getCompaniesHistory() {
-    return request("/api/companies/history/all");
-  }
+  /* -------------------------------------------------------------- portfolio */
 
-  // Real, database-backed homepage market statistics (total coins in
-  // circulation, companies listed, active traders, trades today).
-  async function getStats() {
-    return request("/api/stats");
-  }
+  const portfolio = () => get('/api/portfolio');
+  const holdings = () => get('/api/portfolio/holdings');
+  const myTrades = (limit = 25) => get(`/api/portfolio/trades?limit=${limit}`);
+  const equity = (limit = 180) => get(`/api/portfolio/equity?limit=${limit}`);
+  const watchlist = () => get('/api/portfolio/watchlist');
+  const toggleWatch = (ticker) => request(`/api/portfolio/watchlist/${encodeURIComponent(ticker)}`, { method: 'PUT' });
 
-  async function getMyHoldings() {
-    if (!getToken()) return { data: [], error: null };
-    return request("/api/portfolio/holdings");
-  }
+  /* ------------------------------------------------------------------ admin */
 
-  async function getMyTrades(limit = 25) {
-    if (!getToken()) return { data: [], error: null };
-    return request("/api/portfolio/trades?limit=" + limit);
-  }
-
-  async function executeTrade(companyId, type, shares) {
-    return request("/api/trade", {
-      method: "POST",
-      body: JSON.stringify({ companyId, type, shares }),
-    });
-  }
-
-  async function getLeaderboard() {
-    return request("/api/leaderboard");
-  }
-
-  // No realtime layer here (would need websockets/SSE) — pages that want
-  // fresh prices just re-fetch on an interval or after a trade completes.
-  function subscribeToCompanies() { return null; }
-
-  /* ------------------------------ ADMIN ------------------------------ */
-
-  async function adminSetPrice(companyId, newPrice) {
-    return request(`/api/admin/companies/${companyId}/price`, {
-      method: "PATCH",
-      body: JSON.stringify({ price: newPrice }),
-    });
-  }
-
-  async function adminCreateCompany({ id, name, icon, sector, price, liquidity }) {
-    return request("/api/admin/companies", {
-      method: "POST",
-      body: JSON.stringify({ id, name, icon, sector, price, liquidity }),
-    });
-  }
-
-  async function adminToggleStatus(companyId) {
-    return request(`/api/admin/companies/${companyId}/toggle`, { method: "PATCH" });
-  }
-
-  async function adminPublishEvent(headline, companyId, impactPct) {
-    return request("/api/admin/events", {
-      method: "POST",
-      body: JSON.stringify({ headline, companyId, impactPct }),
-    });
-  }
-
-  async function adminGetUsers() {
-    return request("/api/admin/users");
-  }
-
-  async function adminSetRole(userId, role) {
-    return request(`/api/admin/users/${userId}/role`, {
-      method: "PATCH",
-      body: JSON.stringify({ role }),
-    });
-  }
-
-  async function adminSetBalance(userId, balance) {
-    return request(`/api/admin/users/${userId}/balance`, {
-      method: "PATCH",
-      body: JSON.stringify({ balance }),
-    });
-  }
-
-  async function adminAdjustBalance(userId, delta) {
-    return request(`/api/admin/users/${userId}/balance`, {
-      method: "PATCH",
-      body: JSON.stringify({ delta }),
-    });
-  }
-
-  async function adminGetEvents() {
-    return request("/api/admin/events");
-  }
-
-  async function adminGetSettings() {
-    return request("/api/admin/settings");
-  }
-
-  async function adminUpdateSettings(settings) {
-    return request("/api/admin/settings", {
-      method: "PATCH",
-      body: JSON.stringify(settings),
-    });
-  }
+  const admin = {
+    overview: () => get('/api/admin/overview'),
+    users: () => get('/api/admin/users'),
+    setRole: (id, role) => patch(`/api/admin/users/${id}/role`, { role }),
+    setBalance: (id, balance) => patch(`/api/admin/users/${id}/balance`, { balance }),
+    adjustBalance: (id, delta) => patch(`/api/admin/users/${id}/balance`, { delta }),
+    createCompany: (payload) => post('/api/admin/companies', payload),
+    updateCompany: (ticker, payload) => patch(`/api/admin/companies/${ticker}`, payload),
+    setPrice: (ticker, price) => patch(`/api/admin/companies/${ticker}/price`, { price }),
+    setStatus: (ticker, status) => patch(`/api/admin/companies/${ticker}/status`, { status }),
+    rebuildHistory: (ticker) => del(`/api/admin/companies/${ticker}/history`),
+    publishEvent: (headline, companyId, impactPct) => post('/api/admin/events', { headline, companyId, impactPct }),
+    events: () => get('/api/admin/events'),
+    restingOrders: () => get('/api/admin/orders'),
+    settings: () => get('/api/admin/settings'),
+    updateSettings: (payload) => patch('/api/admin/settings', payload),
+  };
 
   return {
-    isConfigured,
-    signUp, signIn, signOut, getSession, onAuthStateChange,
-    getMyProfile,
-    getCompanies, getCompaniesHistory, getStats, getMyHoldings, getMyTrades, executeTrade, getLeaderboard, subscribeToCompanies,
-    adminSetPrice, adminCreateCompany, adminToggleStatus, adminPublishEvent,
-    adminGetUsers, adminSetRole, adminSetBalance, adminAdjustBalance, adminGetEvents,
-    adminGetSettings, adminUpdateSettings,
+    getToken, setToken, clearToken, isLoggedIn,
+    signUp, signIn, signOut, me,
+    companies, company, quotes, candles, companyNews, tape,
+    marketStatus, marketIndex, movers, news, recentTrades, stats, leaderboard,
+    previewOrder, placeOrder, orders, cancelOrder,
+    portfolio, holdings, myTrades, equity, watchlist, toggleWatch,
+    admin,
   };
 })();
 
-window.DM_DB = DM_DB;
+window.DM_API = DM_API;

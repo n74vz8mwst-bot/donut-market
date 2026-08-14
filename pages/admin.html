@@ -1,391 +1,204 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin — Donut Market</title>
-  <meta name="description" content="Donut Market admin panel — manage companies, prices, and market events." />
+  <title>Admin console — Donut Market</title>
+  <meta name="robots" content="noindex" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍩</text></svg>" />
   <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/core.js"></script>
 </head>
 <body>
+  <div data-shell="nav"></div>
 
-  <!-- ==================== NAVBAR ==================== -->
-  <header class="navbar">
-    <div class="container nav-inner">
-      <a href="../index.html" class="nav-logo">
-        <span class="donut-mark">🍩</span> Donut Market
-      </a>
-
-      <nav class="nav-links" aria-label="Primary">
-        <a href="../index.html">Home</a>
-        <a href="market.html">Market</a>
-        <a href="portfolio.html">Portfolio</a>
-        <a href="leaderboard.html">Leaderboard</a>
-      </nav>
-
-      <div class="nav-actions">
-        <span class="badge-role admin">Admin</span>
-        <a href="login.html" class="btn btn-ghost btn-sm">Sign out</a>
-      </div>
-
-      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+  <main class="container container-wide" style="padding-bottom:48px">
+    <div class="card access-denied" id="denied" hidden>
+      <span class="donut-mark">🔒</span>
+      <h2>Admin access required</h2>
+      <p>This console is gated server-side — every endpoint checks your role on each request,
+         so there's nothing here to unlock from the browser.</p>
+      <a href="../index.html" class="btn btn-primary">Back to the exchange</a>
     </div>
 
-    <div class="mobile-menu glass">
-      <a href="../index.html">Home</a>
-      <a href="market.html">Market</a>
-      <a href="portfolio.html">Portfolio</a>
-      <a href="leaderboard.html">Leaderboard</a>
-      <a href="login.html">Sign out</a>
-    </div>
-  </header>
+    <div id="console" hidden>
+      <section class="page-header">
+        <span class="eyebrow">Exchange operations</span>
+        <h1>Admin console</h1>
+        <p>Run the market: list companies, tune the simulation, halt trading, publish news and
+           set the rules of the exchange.</p>
+      </section>
 
-  <main>
-    <section class="page-header">
-      <div class="container">
-        <span class="eyebrow">Restricted Access</span>
-        <h1>Admin panel</h1>
-        <p>Manage listed companies, adjust prices, publish market events, and moderate traders.</p>
-      </div>
-    </section>
+      <div class="admin-layout">
+        <nav class="admin-sidebar card" id="admin-nav">
+          <button type="button" data-section="overview" class="active">📊 Overview</button>
+          <button type="button" data-section="listings">🏢 Listings</button>
+          <button type="button" data-section="news">📰 News wire</button>
+          <button type="button" data-section="traders">👥 Traders</button>
+          <button type="button" data-section="orders">📋 Resting orders</button>
+          <button type="button" data-section="settings">⚙️ Exchange rules</button>
+        </nav>
 
-    <section class="section" style="padding-top:0;">
-      <div class="container">
-
-        <!-- ==================== ACCESS GATES ==================== -->
-        <div class="access-denied glass reveal" id="logged-out-state" style="display:none;">
-          <span class="donut-mark">🍩</span>
-          <h2>Log in required</h2>
-          <p>You need to be logged in as an admin to view this page.</p>
-          <a href="login.html" class="btn btn-primary">Log in</a>
-        </div>
-        <div class="access-denied glass reveal" id="not-admin-state" style="display:none;">
-          <span class="donut-mark">🔒</span>
-          <h2>Admins only</h2>
-          <p>Your account doesn't have admin access. Ask an existing admin to promote you, or check SETUP.md for how to set the first admin manually.</p>
-          <a href="../index.html" class="btn btn-ghost">Back home</a>
-        </div>
-
-        <div class="admin-layout" id="admin-content" style="display:none;">
-
-          <!-- ==================== SIDEBAR ==================== -->
-          <aside class="admin-sidebar glass">
-            <a href="#overview" class="active" data-panel-link="overview">📊 Overview</a>
-            <a href="#companies" data-panel-link="companies">🏢 Companies</a>
-            <a href="#events" data-panel-link="events">📰 Market Events</a>
-            <a href="#users" data-panel-link="users">👥 Traders</a>
-            <a href="#settings" data-panel-link="settings">⚙️ Settings</a>
-          </aside>
-
-          <!-- ==================== MAIN PANEL ==================== -->
-          <div>
-
-            <!-- Overview KPIs -->
-            <div class="kpi-row">
-              <div class="kpi-card glass reveal">
-                <div class="stat-icon">🍩</div>
-                <div class="stat-value">48.2M</div>
-                <div class="stat-label">Coins in circulation</div>
+        <div>
+          <!-- OVERVIEW -->
+          <section class="admin-section active" data-section="overview">
+            <div class="kpi-row" style="margin-bottom:18px" id="admin-kpis"></div>
+            <div class="panel">
+              <div class="panel-head"><h3>Simulation health</h3></div>
+              <div class="panel-body">
+                <p class="muted" style="font-size:14px">
+                  Prices advance lazily: whichever request looks at a company is what moves its
+                  clock forward. There is no worker to babysit — if the API is up, the market is
+                  running. Candles and news are written as the engine passes through them.
+                </p>
+                <div class="divider"></div>
+                <div class="quote-stats" id="admin-session" style="border:none"></div>
               </div>
-              <div class="kpi-card glass reveal">
-                <div class="stat-icon">🏢</div>
-                <div class="stat-value">8</div>
-                <div class="stat-label">Listed companies</div>
-              </div>
-              <div class="kpi-card glass reveal">
-                <div class="stat-icon">👥</div>
-                <div class="stat-value">12,842</div>
-                <div class="stat-label">Registered traders</div>
-              </div>
-              <div class="kpi-card glass reveal">
-                <div class="stat-icon">⚡</div>
-                <div class="stat-value">5,931</div>
-                <div class="stat-label">Trades today</div>
+            </div>
+          </section>
+
+          <!-- LISTINGS -->
+          <section class="admin-section" data-section="listings">
+            <div class="panel" style="margin-bottom:18px">
+              <div class="panel-head"><h3>List a new company</h3></div>
+              <div class="panel-body">
+                <form id="new-company-form">
+                  <div class="form-row">
+                    <div class="form-group"><label for="nc-id">Ticker</label><input id="nc-id" maxlength="6" placeholder="dnut" required /></div>
+                    <div class="form-group"><label for="nc-name">Name</label><input id="nc-name" placeholder="Donut Corp" required /></div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group"><label for="nc-icon">Icon</label><input id="nc-icon" maxlength="4" placeholder="🍩" /></div>
+                    <div class="form-group"><label for="nc-sector">Sector</label><input id="nc-sector" placeholder="Bakery Tech" /></div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group"><label for="nc-price">Listing price (DC)</label><input id="nc-price" type="number" step="0.01" min="0.01" placeholder="100" required /></div>
+                    <div class="form-group"><label for="nc-liquidity">Liquidity</label><input id="nc-liquidity" type="number" min="1" placeholder="5000" />
+                      <div class="hint">Higher = tighter spreads, lower volatility, less price impact.</div>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group"><label for="nc-shares">Shares outstanding</label><input id="nc-shares" type="number" min="1" placeholder="1000000" /></div>
+                    <div class="form-group"><label for="nc-vol">Annual volatility</label><input id="nc-vol" type="number" step="0.01" placeholder="auto" />
+                      <div class="hint">Leave blank to derive it from liquidity.</div>
+                    </div>
+                  </div>
+                  <div class="form-group"><label for="nc-description">Description</label><textarea id="nc-description" rows="2" placeholder="What does this company do?"></textarea></div>
+                  <div id="nc-error"></div>
+                  <button class="btn btn-primary" type="submit">List company</button>
+                </form>
               </div>
             </div>
 
-            <!-- Companies management -->
-            <div class="admin-panel glass" id="companies">
-              <div class="admin-panel-head">
-                <h3>Manage companies</h3>
-                <button class="btn btn-primary btn-sm" id="new-company-btn">+ New company</button>
-              </div>
-              <div class="table-wrap">
-                <table class="data-table" id="admin-companies-table">
-                  <thead>
-                    <tr>
-                      <th>Company</th>
-                      <th>Ticker</th>
-                      <th>Price</th>
-                      <th>Liquidity</th>
-                      <th>Status</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Market events -->
-            <div class="admin-panel glass" id="events">
-              <div class="admin-panel-head">
-                <h3>Market events &amp; news</h3>
-                <button class="btn btn-primary btn-sm" id="publish-event-btn">+ Publish event</button>
-              </div>
-              <div class="table-wrap">
-                <table class="data-table" id="admin-events-table">
-                  <thead><tr><th>Headline</th><th>Affected Ticker</th><th>Impact</th><th>Published</th></tr></thead>
-                  <tbody>
-                    <tr><td colspan="4" style="text-align:center;color:var(--ink-30);padding:32px;">Loading…</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Trader moderation -->
-            <div class="admin-panel glass" id="users">
-              <div class="admin-panel-head">
-                <h3>Traders</h3>
-                <div class="search-input" style="min-width:220px;">
-                  <span aria-hidden="true">🔍</span>
-                  <input type="text" placeholder="Search traders…" />
-                </div>
-              </div>
+            <div class="panel">
+              <div class="panel-head"><h3>Listed companies</h3><span class="tiny muted">Click a row to edit its simulation</span></div>
               <div class="table-wrap">
                 <table class="data-table">
-                  <thead><tr><th>Trader</th><th>Balance</th><th>Role</th><th>Joined</th><th></th></tr></thead>
-                  <tbody id="admin-users-table"></tbody>
+                  <thead>
+                    <tr><th>Company</th><th class="num">Last</th><th class="num">Today</th><th class="num">Vol %</th><th class="num">Beta</th><th class="num">ADV</th><th>Status</th><th style="text-align:right">Actions</th></tr>
+                  </thead>
+                  <tbody id="admin-companies"></tbody>
                 </table>
               </div>
             </div>
+          </section>
 
-            <!-- Settings -->
-            <div class="admin-panel glass" id="settings">
-              <div class="admin-panel-head"><h3>Market settings</h3></div>
-              <div class="form-group">
-                <label for="starting-balance">Starting balance for new traders (DC)</label>
-                <input type="text" id="starting-balance" value="10000" />
-                <small style="color:var(--ink-30);display:block;margin-top:6px;">Applies to accounts created from now on. Existing traders keep their own starting balance.</small>
+          <!-- NEWS -->
+          <section class="admin-section" data-section="news">
+            <div class="panel" style="margin-bottom:18px">
+              <div class="panel-head"><h3>Publish a headline</h3></div>
+              <div class="panel-body">
+                <form id="event-form">
+                  <div class="form-group"><label for="ev-headline">Headline</label><input id="ev-headline" placeholder="Donut Corp acquires Glaze Dynamics" required /></div>
+                  <div class="form-row">
+                    <div class="form-group"><label for="ev-company">Company</label><select id="ev-company"><option value="">Market-wide (no price impact)</option></select></div>
+                    <div class="form-group"><label for="ev-impact">Price impact %</label><input id="ev-impact" type="number" step="0.1" placeholder="0" />
+                      <div class="hint">Moves the price and most of its fair value, so the move sticks.</div>
+                    </div>
+                  </div>
+                  <div id="ev-error"></div>
+                  <button class="btn btn-primary" type="submit">Publish</button>
+                </form>
               </div>
-              <div class="form-group">
-                <label for="market-hours">Market hours</label>
-                <input type="text" id="market-hours" value="24/7 — always open" disabled style="opacity:0.6;" />
-              </div>
-              <button class="btn btn-primary" id="save-settings-btn">Save settings</button>
             </div>
+            <div class="panel">
+              <div class="panel-head"><h3>Recent wire</h3></div>
+              <div class="news-list" id="admin-news"></div>
+            </div>
+          </section>
 
-          </div>
+          <!-- TRADERS -->
+          <section class="admin-section" data-section="traders">
+            <div class="panel">
+              <div class="panel-head"><h3>Traders</h3></div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>Trader</th><th class="num">Cash</th><th class="num">Reserved</th><th class="num">Realised</th><th class="num">Trades</th><th>Role</th><th style="text-align:right">Actions</th></tr></thead>
+                  <tbody id="admin-users"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ORDERS -->
+          <section class="admin-section" data-section="orders">
+            <div class="panel">
+              <div class="panel-head"><h3>Resting orders across the exchange</h3></div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>Trader</th><th>Ticker</th><th>Side</th><th>Type</th><th class="num">Qty</th><th class="num">Limit</th><th class="num">Stop</th><th>Status</th><th class="num">Placed</th></tr></thead>
+                  <tbody id="admin-orders"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- SETTINGS -->
+          <section class="admin-section" data-section="settings">
+            <div class="panel">
+              <div class="panel-head"><h3>Exchange rules</h3></div>
+              <div class="panel-body">
+                <form id="settings-form">
+                  <div class="form-row">
+                    <div class="form-group"><label for="st-mode">Trading calendar</label>
+                      <select id="st-mode">
+                        <option value="exchange">Exchange hours (NYSE calendar)</option>
+                        <option value="24/7">24/7 — always open</option>
+                      </select>
+                      <div class="hint">Exchange hours include pre-market, after-hours, weekends and holidays.</div>
+                    </div>
+                    <div class="form-group"><label for="st-start">Starting balance for new traders</label><input id="st-start" type="number" min="0" /></div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group"><label for="st-commission">Commission (bps)</label><input id="st-commission" type="number" min="0" max="500" step="0.5" /></div>
+                    <div class="form-group"><label for="st-mincommission">Minimum commission (DC)</label><input id="st-mincommission" type="number" min="0" step="0.1" /></div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group"><label for="st-sellfee">Sell-side fee (bps)</label><input id="st-sellfee" type="number" min="0" max="500" step="0.1" /></div>
+                    <div class="form-group"><label for="st-maxorder">Max order size (DC)</label><input id="st-maxorder" type="number" min="1" /></div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group"><label for="st-maxposition">Max position (% of net worth)</label><input id="st-maxposition" type="number" min="1" max="100" /></div>
+                    <div class="form-group"><label for="st-extended">Extended-hours trading</label>
+                      <select id="st-extended"><option value="true">Allowed (limit orders only)</option><option value="false">Blocked</option></select>
+                    </div>
+                  </div>
+                  <div id="st-error"></div>
+                  <button class="btn btn-primary" type="submit">Save rules</button>
+                </form>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
-    </section>
+    </div>
   </main>
 
-  <script src="../js/main.js"></script>
+  <div data-shell="footer"></div>
+
   <script src="../js/api.js"></script>
-  <script src="../js/live.js"></script>
-  <script src="../js/auth-ui.js"></script>
-  <script>
-    let companiesCache = [];
-
-    async function renderAdminCompanies() {
-      const { data, error } = await DM_DB.getCompanies();
-      companiesCache = error ? [] : data;
-      const body = document.querySelector('#admin-companies-table tbody');
-      body.innerHTML = companiesCache.map(c => `
-        <tr class="body-row">
-          <td><span style="margin-right:8px;">${c.icon}</span>${c.name}</td>
-          <td class="num" style="color:var(--ink-30);">$${c.id.toUpperCase()}</td>
-          <td class="num">${DM.formatNumber(c.price)} DC</td>
-          <td class="num">${DM.formatNumber(c.liquidity)}</td>
-          <td><span class="stock-status ${c.status === 'closed' ? 'closed' : ''}">${c.status === 'open' ? '● Open' : 'Closed'}</span></td>
-          <td>
-            <button class="btn btn-ghost btn-sm" data-edit-price="${c.id}">Edit price</button>
-            <button class="btn btn-ghost btn-sm" data-toggle="${c.id}">${c.status === 'open' ? 'Close' : 'Reopen'}</button>
-          </td>
-        </tr>
-      `).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--ink-30);padding:32px;">No companies yet — create one below.</td></tr>`;
-
-      body.querySelectorAll('[data-edit-price]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const c = companiesCache.find(x => x.id === btn.getAttribute('data-edit-price'));
-          const input = prompt(`New price for ${c.name} (currently ${c.price} DC):`, c.price);
-          if (input === null) return;
-          const price = parseFloat(input);
-          if (!price || price <= 0) return DM.openToast('Enter a valid positive price.');
-          const { error } = await DM_DB.adminSetPrice(c.id, price);
-          DM.openToast(error ? error.message : `${c.name} price updated to ${price} DC.`);
-          if (!error) renderAdminCompanies();
-        });
-      });
-
-      body.querySelectorAll('[data-toggle]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const c = companiesCache.find(x => x.id === btn.getAttribute('data-toggle'));
-          const { error } = await DM_DB.adminToggleStatus(c.id);
-          DM.openToast(error ? error.message : `${c.name} is now ${c.status === 'open' ? 'closed' : 'open'}.`);
-          if (!error) renderAdminCompanies();
-        });
-      });
-    }
-
-    async function renderAdminUsers() {
-      const { data, error } = await DM_DB.adminGetUsers();
-      const users = error ? [] : data;
-      document.getElementById('admin-users-table').innerHTML = users.map(u => `
-        <tr class="body-row">
-          <td style="font-weight:600;">${u.username}</td>
-          <td class="num">${DM.formatNumber(u.balance)} DC</td>
-          <td><span class="badge-role ${u.role}">${u.role}</span></td>
-          <td class="num" style="color:var(--ink-30);">${new Date(u.createdAt).toLocaleDateString()}</td>
-          <td>
-            <button class="btn btn-ghost btn-sm" data-edit-balance="${u.id || u._id}" data-username="${u.username}" data-current-balance="${u.balance}">Edit balance</button>
-            <button class="btn btn-ghost btn-sm" data-toggle-role="${u.id || u._id}" data-current-role="${u.role}">
-              Make ${u.role === 'admin' ? 'trader' : 'admin'}
-            </button>
-          </td>
-        </tr>
-      `).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--ink-30);padding:32px;">No traders yet.</td></tr>`;
-
-      document.querySelectorAll('[data-edit-balance]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const userId = btn.getAttribute('data-edit-balance');
-          const username = btn.getAttribute('data-username');
-          const current = parseFloat(btn.getAttribute('data-current-balance'));
-
-          const mode = prompt(
-            `Editing ${username}'s balance (currently ${DM.formatNumber(current)} DC).\n\n` +
-            `Type a plain number to SET the exact balance (e.g. 5000)\n` +
-            `Type +/- a number to ADD or SUBTRACT (e.g. +500 or -200)`,
-            ''
-          );
-          if (mode === null || mode.trim() === '') return;
-
-          const input = mode.trim();
-          const isDelta = input.startsWith('+') || input.startsWith('-');
-          const num = parseFloat(input);
-          if (isNaN(num)) return DM.openToast('Enter a valid number.');
-
-          const { error } = isDelta
-            ? await DM_DB.adminAdjustBalance(userId, num)
-            : await DM_DB.adminSetBalance(userId, num);
-
-          if (error) {
-            DM.openToast(error.message);
-          } else {
-            DM.openToast(isDelta
-              ? `${username}'s balance adjusted by ${num >= 0 ? '+' : ''}${num} DC.`
-              : `${username}'s balance set to ${num} DC.`);
-            renderAdminUsers();
-          }
-        });
-      });
-
-      document.querySelectorAll('[data-toggle-role]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const newRole = btn.getAttribute('data-current-role') === 'admin' ? 'trader' : 'admin';
-          const { error } = await DM_DB.adminSetRole(btn.getAttribute('data-toggle-role'), newRole);
-          DM.openToast(error ? error.message : `Role updated to ${newRole}.`);
-          if (!error) renderAdminUsers();
-        });
-      });
-    }
-
-    async function renderAdminEvents() {
-      const { data } = await DM_DB.adminGetEvents();
-      const events = data || [];
-      const body = document.querySelector('#admin-events-table tbody');
-      if (!body) return;
-      body.innerHTML = events.map(e => `
-        <tr class="body-row">
-          <td>${e.headline}</td>
-          <td>${e.companyId ? e.companyId.toUpperCase() : '—'}</td>
-          <td style="color:${e.impactPct >= 0 ? 'var(--profit)' : 'var(--loss)'};">${e.impactPct >= 0 ? '▲' : '▼'} ${Math.abs(e.impactPct)}%</td>
-          <td class="num" style="color:var(--ink-30);">${new Date(e.createdAt).toLocaleString()}</td>
-        </tr>
-      `).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--ink-30);padding:32px;">No events published yet.</td></tr>`;
-    }
-
-    document.getElementById('new-company-btn')?.addEventListener('click', async () => {
-      const id = prompt('Ticker (short, letters only, e.g. "puff"):');
-      if (!id) return;
-      const name = prompt('Company name:');
-      if (!name) return;
-      const icon = prompt('Emoji icon:', '🍩') || '🍩';
-      const sector = prompt('Sector:', 'Consumer') || 'Consumer';
-      const price = parseFloat(prompt('Starting price (DC):', '100'));
-      if (!price || price <= 0) return DM.openToast('Enter a valid positive price.');
-      const liquidity = parseFloat(prompt('Liquidity (higher = price moves less per trade):', '5000')) || 5000;
-
-      const { error } = await DM_DB.adminCreateCompany({ id, name, icon, sector, price, liquidity });
-      DM.openToast(error ? error.message : `${name} listed on the market.`);
-      if (!error) renderAdminCompanies();
-    });
-
-    document.getElementById('publish-event-btn')?.addEventListener('click', async () => {
-      const headline = prompt('Headline:');
-      if (!headline) return;
-      const companyId = prompt('Affected ticker (leave blank for none):') || null;
-      let impactPct = 0;
-      if (companyId) {
-        impactPct = parseFloat(prompt('Price impact %, e.g. 5 or -3:', '0')) || 0;
-      }
-      const { error } = await DM_DB.adminPublishEvent(headline, companyId, impactPct);
-      DM.openToast(error ? error.message : 'Event published.');
-      if (!error) { renderAdminEvents(); renderAdminCompanies(); }
-    });
-
-    // Sidebar active-state on click (single-page anchor sections)
-    document.querySelectorAll('[data-panel-link]').forEach(link => {
-      link.addEventListener('click', () => {
-        document.querySelectorAll('[data-panel-link]').forEach(l => l.classList.remove('active'));
-        link.classList.add('active');
-      });
-    });
-
-    async function loadSettings() {
-      const { data, error } = await DM_DB.adminGetSettings();
-      if (error || !data) return;
-      document.getElementById('starting-balance').value = DM.formatNumber(data.startingBalance);
-    }
-
-    document.getElementById('save-settings-btn')?.addEventListener('click', async () => {
-      const raw = document.getElementById('starting-balance').value.replace(/[, ]/g, '');
-      const startingBalance = parseFloat(raw);
-      if (isNaN(startingBalance) || startingBalance < 0) {
-        return DM.openToast('Enter a valid non-negative starting balance.');
-      }
-      const { data, error } = await DM_DB.adminUpdateSettings({ startingBalance });
-      if (error) {
-        DM.openToast(error.message);
-      } else {
-        document.getElementById('starting-balance').value = DM.formatNumber(data.startingBalance);
-        DM.openToast(`Starting balance for new traders set to ${DM.formatNumber(data.startingBalance)} DC.`);
-      }
-    });
-
-    async function gateAndLoad() {
-      const { data: { session } } = await DM_DB.getSession();
-      if (!session) {
-        document.getElementById('logged-out-state').style.display = 'block';
-        return;
-      }
-      const { data: profile } = await DM_DB.getMyProfile();
-      if (!profile || profile.role !== 'admin') {
-        document.getElementById('not-admin-state').style.display = 'block';
-        return;
-      }
-      document.getElementById('admin-content').style.display = 'grid';
-      renderAdminCompanies();
-      renderAdminUsers();
-      renderAdminEvents();
-      loadSettings();
-    }
-
-    gateAndLoad();
-  </script>
+  <script src="../js/components.js"></script>
+  <script src="../js/shell.js"></script>
+  <script src="../js/pages/admin.js"></script>
 </body>
 </html>

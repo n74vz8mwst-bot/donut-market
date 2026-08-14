@@ -2,10 +2,14 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const Settings = require("../models/Settings");
+const settingsService = require("../services/settings");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
+
+const USERNAME_RE = /^[a-zA-Z0-9_]{3,18}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD = 8;
 
 function signToken(user) {
   return jwt.sign({ sub: user._id.toString() }, process.env.JWT_SECRET, { expiresIn: "30d" });
@@ -18,17 +22,25 @@ router.post("/signup", async (req, res) => {
     if (!username || !email || !password) {
       return res.status(400).json({ error: "Username, email, and password are all required." });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters." });
+    if (!USERNAME_RE.test(username)) {
+      return res.status(400).json({ error: "Usernames are 3–18 characters, letters, numbers and underscores only." });
+    }
+    if (!EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: "That doesn't look like an email address." });
+    }
+    if (password.length < MIN_PASSWORD) {
+      return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD} characters.` });
     }
 
-    const existing = await User.findOne({ $or: [{ email: email.toLowerCase() }, { username }] });
+    const existing = await User.findOne({
+      $or: [{ email: email.toLowerCase() }, { username: new RegExp(`^${username}$`, "i") }],
+    });
     if (existing) {
       return res.status(409).json({ error: "That username or email is already taken." });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const { startingBalance } = await Settings.getSingleton();
+    const { startingBalance } = await settingsService.get();
     const user = await User.create({
       username,
       email,
@@ -37,11 +49,11 @@ router.post("/signup", async (req, res) => {
       startingBalance,
     });
 
-    const token = signToken(user);
-    res.status(201).json({ token, ...user.toJSON() });
+    res.status(201).json({ token: signToken(user), ...user.toJSON() });
   } catch (err) {
+    if (err.code === 11000) return res.status(409).json({ error: "That username or email is already taken." });
     console.error(err);
-    res.status(500).json({ error: "Could not create account." });
+    res.status(500).json({ error: "Could not create your account." });
   }
 });
 
@@ -52,28 +64,33 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "Email and password are required." });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
+    const user = await User.findOne({ email: String(email).toLowerCase() });
+    // Same message either way — telling an attacker which half was wrong is
+    // free information.
+    const match = user ? await bcrypt.compare(password, user.passwordHash) : false;
+    if (!user || !match) {
       return res.status(401).json({ error: "Incorrect email or password." });
     }
 
-    const match = await bcrypt.compare(password, user.passwordHash);
-    if (!match) {
-      return res.status(401).json({ error: "Incorrect email or password." });
-    }
+    user.lastSeenAt = new Date();
+    await user.save();
 
-    const token = signToken(user);
-    res.json({ token, ...user.toJSON() });
+    res.json({ token: signToken(user), ...user.toJSON() });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Could not log in." });
+    res.status(500).json({ error: "Could not log you in." });
   }
 });
 
 router.get("/me", requireAuth, async (req, res) => {
-  const user = await User.findById(req.userId);
-  if (!user) return res.status(404).json({ error: "User not found." });
-  res.json(user.toJSON());
+  try {
+    const user = await User.findByIdAndUpdate(req.userId, { lastSeenAt: new Date() }, { new: true });
+    if (!user) return res.status(404).json({ error: "User not found." });
+    res.json(user.toJSON());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Could not load your account." });
+  }
 });
 
 module.exports = router;

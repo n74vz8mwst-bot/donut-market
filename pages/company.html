@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading terminal — Donut Market</title>
+  <meta name="description" content="Chart, order book, time and sales, news and an order ticket for a single Donut Market listing." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍩</text></svg>" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/core.js"></script>
+</head>
+<body>
+  <div data-shell="nav"></div>
+
+  <main class="container container-wide" style="padding-top:20px;padding-bottom:40px">
+    <div id="terminal-error"></div>
+
+    <div class="terminal" id="terminal" hidden>
+      <!-- ==================== MAIN COLUMN ==================== -->
+      <div class="terminal-main">
+        <!-- Quote header -->
+        <div class="panel">
+          <div class="quote-head">
+            <div class="quote-identity">
+              <div class="logo" id="q-icon">🍩</div>
+              <div>
+                <h1 id="q-name">—</h1>
+                <div class="sub"><span id="q-ticker">—</span> · <span id="q-sector">—</span> · <span id="q-status"></span></div>
+              </div>
+            </div>
+            <div class="quote-price">
+              <div class="last" id="q-price">—</div>
+              <div class="chg" id="q-change">—</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;width:100%;justify-content:flex-end">
+              <button class="btn btn-ghost btn-sm" id="q-watch" hidden>☆ Watch</button>
+            </div>
+          </div>
+          <div class="quote-stats" id="q-stats"></div>
+        </div>
+
+        <!-- Chart -->
+        <div class="panel">
+          <div class="chart-toolbar">
+            <div class="seg seg-sm" id="tf-picker">
+              <button type="button" data-tf="1m">1m</button>
+              <button type="button" data-tf="5m" class="active">5m</button>
+              <button type="button" data-tf="15m">15m</button>
+              <button type="button" data-tf="1h">1h</button>
+              <button type="button" data-tf="1d">1D</button>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <span class="tiny muted" id="chart-note">Candles include pre- and after-hours prints</span>
+              <div class="seg seg-sm" id="type-picker">
+                <button type="button" data-type="candles" class="active">Candles</button>
+                <button type="button" data-type="area">Line</button>
+              </div>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap"><canvas id="price-chart"></canvas></div>
+        </div>
+
+        <!-- Position + orders -->
+        <div class="panel" id="position-panel" hidden>
+          <div class="panel-head"><h3>Your position</h3><a class="tiny muted" href="portfolio.html">Full portfolio →</a></div>
+          <div class="quote-stats" id="position-stats"></div>
+        </div>
+
+        <div class="panel" id="orders-panel" hidden>
+          <div class="panel-head"><h3>Your resting orders in this name</h3></div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Side</th><th>Type</th><th class="num">Qty</th><th class="num">Price</th><th>Status</th><th class="num">Placed</th><th></th></tr></thead>
+              <tbody id="orders-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- About + news -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="company-split">
+          <div class="panel">
+            <div class="panel-head"><h3>About</h3></div>
+            <div class="panel-body">
+              <p class="muted" id="q-description" style="font-size:14px">—</p>
+              <div class="divider"></div>
+              <div class="quote-stats" id="fundamentals" style="border:none"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>News</h3></div>
+            <div class="news-list" id="company-news"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== SIDE COLUMN ==================== -->
+      <aside class="terminal-side">
+        <div class="panel">
+          <div class="panel-head"><h3>Order ticket</h3><span class="tiny muted" id="ticket-session">—</span></div>
+          <div id="ticket-slot"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Order book</h3>
+            <span class="tiny muted">Depth</span>
+          </div>
+          <div class="panel-body flush" id="book-slot" style="padding-bottom:10px"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>Time &amp; sales</h3><span class="tiny muted">Last prints</span></div>
+          <div class="panel-body flush" id="tape-slot"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div data-shell="footer"></div>
+
+  <script src="../js/api.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/chart.js"></script>
+  <script src="../js/ticket.js"></script>
+  <script src="../js/shell.js"></script>
+  <script src="../js/pages/company.js"></script>
+</body>
+</html>

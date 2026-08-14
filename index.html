@@ -1,172 +1,123 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Donut Market — Trade. Compete. Become the Legend.</title>
-  <meta name="description" content="Donut Market is a virtual stock exchange where you trade fictional companies with Donut Coins, climb the leaderboard, and build the biggest portfolio." />
+  <title>Donut Market — a simulated stock exchange</title>
+  <meta name="description" content="Donut Market is a simulated stock exchange with real market microstructure: two-sided quotes, order books, limit and stop orders, trading sessions and a news wire. Trade fictional companies with Donut Coins." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍩</text></svg>" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="css/style.css" />
+  <script src="js/core.js"></script>
 </head>
 <body>
-
-  <!-- ==================== NAVBAR ==================== -->
-  <header class="navbar">
-    <div class="container nav-inner">
-      <a href="index.html" class="nav-logo">
-        <span class="donut-mark">🍩</span> Donut Market
-      </a>
-
-      <nav class="nav-links" aria-label="Primary">
-        <a href="index.html" class="active">Home</a>
-        <a href="pages/market.html">Market</a>
-        <a href="pages/portfolio.html">Portfolio</a>
-        <a href="pages/leaderboard.html">Leaderboard</a>
-      </nav>
-
-      <div class="nav-actions">
-        <a href="pages/login.html" class="btn btn-ghost btn-sm">Login</a>
-        <a href="pages/market.html" class="btn btn-primary btn-sm">Start Trading</a>
-      </div>
-
-      <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-
-    <div class="mobile-menu glass">
-      <a href="index.html" class="active">Home</a>
-      <a href="pages/market.html">Market</a>
-      <a href="pages/portfolio.html">Portfolio</a>
-      <a href="pages/leaderboard.html">Leaderboard</a>
-      <a href="pages/login.html">Login</a>
-    </div>
-  </header>
-  <!-- js/api.js talks to your Express+MongoDB backend in /backend. Demo data
-       is used automatically as a fallback anywhere the request fails. -->
+  <div data-shell="nav"></div>
 
   <main>
     <!-- ==================== HERO ==================== -->
     <section class="hero">
       <div class="hero-glow" aria-hidden="true"></div>
       <div class="container hero-inner">
-
         <div class="hero-copy">
-          <span class="eyebrow">Season 1 · Now Live</span>
+          <span class="eyebrow">Season 1 · Live</span>
           <h1 class="hero-title">
-            Trade. Compete.<br />
-            Become the <span class="text-gradient">Donut&nbsp;Market</span> Legend.
+            A market that behaves like<br />
+            <span class="text-gradient">a real one.</span>
           </h1>
           <p class="hero-subtitle">
-            Trade virtual companies, manage your Donut Coins, and build the biggest portfolio
-            on a market that never stops glazing.
+            Two-sided quotes, an order book with depth, limit and stop orders, commission,
+            slippage, overnight gaps and a news wire that explains every move. All of it
+            simulated, none of it real money.
           </p>
 
           <div class="hero-cta">
-            <a href="pages/login.html" class="btn btn-primary">Start Trading →</a>
-            <a href="pages/market.html" class="btn btn-ghost">View Market</a>
+            <a href="pages/login.html?mode=signup" class="btn btn-primary">Open an account →</a>
+            <a href="pages/market.html" class="btn btn-ghost">Browse the market</a>
           </div>
 
           <div class="hero-proof">
             <div>
-              <span class="val mono">48.2M</span>
-              <span class="lbl">Donuts in circulation</span>
+              <span class="val mono" id="proof-index">—</span>
+              <span class="lbl">Donut 500</span>
             </div>
             <div>
-              <span class="val mono">12,842</span>
+              <span class="val mono" id="proof-traders">—</span>
               <span class="lbl">Active traders</span>
             </div>
             <div>
-              <span class="val mono">5,931</span>
+              <span class="val mono" id="proof-trades">—</span>
               <span class="lbl">Trades today</span>
             </div>
           </div>
         </div>
 
-        <div class="hero-visual glass reveal">
-          <span class="floating-badge b1 glass">▲ +14.2% DNUT</span>
-          <span class="floating-badge b2 glass">🍩 New listing: FRST</span>
-
+        <div class="hero-visual card">
           <div class="hero-visual-head">
-            <div class="ticker">
-              <span class="icon">🍩</span>
-              <div>
-                <div style="font-weight:600;font-size:14px;">Donut Corp <span class="mono" style="color:var(--ink-30);font-weight:400;">$DNUT</span></div>
-              </div>
+            <div>
+              <div class="label">Donut 500 Index</div>
+              <div class="mono" style="font-size:26px;font-weight:700" id="hero-index-value">—</div>
             </div>
-            <div style="text-align:right;">
-              <div class="price" data-live-price="250.4">250 DC</div>
-              <div class="delta" data-live-delta>▲ 4.50%</div>
+            <div style="text-align:right">
+              <div class="mono" style="font-weight:600" id="hero-index-change">—</div>
+              <div class="tiny muted" id="hero-index-breadth">—</div>
             </div>
           </div>
-
-          <div class="hero-canvas-wrap">
-            <canvas id="hero-chart"></canvas>
-          </div>
-
-          <div class="hero-visual-foot">
-            <div class="mini"><div class="n">24h Vol</div><div class="l">182K DC</div></div>
-            <div class="mini"><div class="n">Mkt Cap</div><div class="l">4.1M DC</div></div>
-            <div class="mini"><div class="n">Holders</div><div class="l">3,204</div></div>
-            <div class="mini"><div class="n">Status</div><div class="l" style="color:var(--profit);">● Open</div></div>
-          </div>
+          <div class="hero-chart-wrap"><canvas id="hero-chart"></canvas></div>
         </div>
-
       </div>
     </section>
 
-    <!-- ==================== MARKET STATUS STRIP ==================== -->
-    <div class="market-status-strip">
-      <span class="pulse-dot" aria-hidden="true"></span>
-      Market is open · prices update every few seconds · this is a simulated exchange, no real money involved
-    </div>
-
-    <!-- ==================== MARKET STATISTICS ==================== -->
-    <section class="section" aria-label="Market statistics">
+    <!-- ==================== STATS ==================== -->
+    <section class="section" style="padding-top:12px" aria-label="Exchange statistics">
       <div class="container">
         <div class="stats-grid">
-          <div class="stat-card glass reveal">
+          <div class="stat-card card reveal">
             <div class="stat-icon">🍩</div>
-            <div class="stat-value"><span id="stat-total-coins" data-dynamic-stat data-counter="0" data-suffix=" DC">0</span></div>
-            <div class="stat-label">Total Donut Coins in circulation</div>
-            <div class="stat-delta" id="stat-total-coins-delta">Loading…</div>
+            <div class="stat-value" id="stat-coins">—</div>
+            <div class="stat-label">Donut Coins in circulation</div>
+            <div class="stat-delta" id="stat-coins-sub">Cash plus the market value of every position</div>
           </div>
-          <div class="stat-card glass reveal">
+          <div class="stat-card card reveal">
             <div class="stat-icon">🏢</div>
-            <div class="stat-value"><span id="stat-companies" data-dynamic-stat data-counter="0">0</span></div>
+            <div class="stat-value" id="stat-companies">—</div>
             <div class="stat-label">Companies listed</div>
-            <div class="stat-delta" id="stat-companies-delta">Loading…</div>
+            <div class="stat-delta" id="stat-companies-sub">—</div>
           </div>
-          <div class="stat-card glass reveal">
+          <div class="stat-card card reveal">
             <div class="stat-icon">👥</div>
-            <div class="stat-value"><span id="stat-traders" data-dynamic-stat data-counter="0">0</span></div>
-            <div class="stat-label">Active traders (7d)</div>
-            <div class="stat-delta" id="stat-traders-delta">Loading…</div>
+            <div class="stat-value" id="stat-traders">—</div>
+            <div class="stat-label">Traders active this week</div>
+            <div class="stat-delta" id="stat-traders-sub">—</div>
           </div>
-          <div class="stat-card glass reveal">
+          <div class="stat-card card reveal">
             <div class="stat-icon">⚡</div>
-            <div class="stat-value"><span id="stat-trades-today" data-dynamic-stat data-counter="0">0</span></div>
+            <div class="stat-value" id="stat-trades">—</div>
             <div class="stat-label">Trades today</div>
-            <div class="stat-delta" id="stat-trades-today-delta">Loading…</div>
+            <div class="stat-delta" id="stat-trades-sub">—</div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ==================== FEATURED COMPANIES ==================== -->
-    <section class="section section-alt" aria-label="Featured companies">
+    <!-- ==================== MOVERS + NEWS ==================== -->
+    <section class="section section-alt" aria-label="Movers and news">
       <div class="container">
         <div class="section-top-row">
           <div class="section-heading">
             <span class="eyebrow">Live Market</span>
-            <h2>Featured companies</h2>
-            <p>Fictional stocks with real market drama. Prices move, rumors spread, fortunes are glazed.</p>
+            <h2>Today on the exchange</h2>
+            <p>Prices update every few seconds. Every headline below was written by the same
+               event that moved the chart.</p>
           </div>
-          <a href="pages/market.html" class="btn btn-ghost btn-sm">View all companies →</a>
+          <a href="pages/market.html" class="btn btn-ghost btn-sm">All companies →</a>
         </div>
 
-        <div class="stocks-grid" id="featured-stocks">
-          <!-- populated by main.js: DM.renderStockCards -->
+        <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:18px;align-items:start" class="home-split">
+          <div class="stocks-grid" id="featured-stocks" style="grid-template-columns:repeat(2,1fr)"></div>
+          <div class="panel">
+            <div class="panel-head"><h3>News wire</h3><a class="tiny muted" href="pages/market.html#news">All news</a></div>
+            <div class="news-list" id="home-news"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -175,69 +126,79 @@
     <section class="section" aria-label="How it works">
       <div class="container">
         <div class="section-heading center">
-          <span class="eyebrow">The Loop</span>
-          <h2>How Donut Market works</h2>
-          <p>Three steps stand between you and the top of the leaderboard.</p>
+          <span class="eyebrow">Under the hood</span>
+          <h2>What makes it feel real</h2>
+          <p>Most stock-market games move a number randomly. This one models the parts that
+             actually decide whether a trade was any good.</p>
         </div>
 
         <div class="steps-grid">
-          <div class="step-card glass reveal">
-            <span class="step-number">01 / Earn</span>
-            <div class="step-icon">💰</div>
-            <h3>Earn Donuts</h3>
-            <p>Every trader starts with a virtual balance of Donut Coins. Complete daily challenges, log in streaks, and market events to grow your stash before you even place a trade.</p>
+          <div class="step-card card reveal">
+            <span class="step-number">01 / Microstructure</span>
+            <div class="step-icon">📖</div>
+            <h3>You trade against a book</h3>
+            <p>Every company quotes a bid and an ask with depth behind it. You buy at the offer,
+               sell at the bid, and a large order walks the ladder and fills at a worse average
+               price. Size costs money, exactly as it should.</p>
           </div>
-          <div class="step-card glass reveal">
-            <span class="step-number">02 / Trade</span>
+          <div class="step-card card reveal">
+            <span class="step-number">02 / Price process</span>
             <div class="step-icon">📈</div>
-            <h3>Trade Stocks</h3>
-            <p>Buy and sell fictional companies as prices move in real time. Read the charts, time the market, and watch your portfolio react to every swing.</p>
+            <h3>Prices have structure</h3>
+            <p>A market factor drags the whole exchange around, sectors move together, and each
+               name adds its own noise on top. Volatility clusters, prices revert toward fair
+               value, and rare jumps arrive as news.</p>
           </div>
-          <div class="step-card glass reveal">
-            <span class="step-number">03 / Compete</span>
-            <div class="step-icon">🏆</div>
-            <h3>Become #1</h3>
-            <p>Every trade counts toward your rank. Climb the global leaderboard and defend your spot as the season's top Donut Market trader.</p>
+          <div class="step-card card reveal">
+            <span class="step-number">03 / Sessions</span>
+            <div class="step-icon">🔔</div>
+            <h3>The market closes</h3>
+            <p>Pre-market, regular hours, after-hours, weekends and holidays — on the real NYSE
+               calendar. Trade thin sessions at your peril, and watch what the overnight gap
+               does to the stop you left resting.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ==================== LEADERBOARD PREVIEW ==================== -->
+    <!-- ==================== LEADERBOARD ==================== -->
     <section class="section section-alt" aria-label="Leaderboard preview">
       <div class="container">
         <div class="section-top-row">
           <div class="section-heading">
             <span class="eyebrow">Top Traders</span>
-            <h2>Leaderboard preview</h2>
-            <p>The best portfolios on Donut Market right now, ranked by total balance and profit.</p>
+            <h2>Who's winning</h2>
+            <p>Ranked by net worth. Returns are measured against what each account started with.</p>
           </div>
           <a href="pages/leaderboard.html" class="btn btn-ghost btn-sm">Full leaderboard →</a>
         </div>
 
-        <div class="leaderboard-panel glass">
-          <div class="leaderboard-row head">
-            <span>Rank</span>
-            <span>Trader</span>
-            <span style="text-align:right;">Balance</span>
-            <span style="text-align:right;">Profit</span>
-          </div>
-          <div id="leaderboard-preview">
-            <!-- populated by main.js: DM.renderLeaderboard -->
-          </div>
+        <div class="card table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:64px">#</th>
+                <th>Trader</th>
+                <th class="num">Net worth</th>
+                <th class="num">Today</th>
+                <th class="num">Return</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-preview"></tbody>
+          </table>
         </div>
       </div>
     </section>
 
-    <!-- ==================== CTA BAND ==================== -->
-    <section class="section" style="padding-top:0;">
+    <!-- ==================== CTA ==================== -->
+    <section class="section" style="padding-top:0">
       <div class="container">
-        <div class="cta-band glass reveal">
-          <span class="eyebrow" style="justify-content:center;">Free to Play</span>
-          <h2>Your first 10,000 Donut Coins are waiting.</h2>
-          <p>No real money, no risk — just the thrill of the chart. Create an account and start trading in under a minute.</p>
+        <div class="cta-band card reveal">
+          <span class="eyebrow" style="justify-content:center">Free to play</span>
+          <h2>Your starting balance is waiting.</h2>
+          <p>No real money, no risk — just the part of trading that's actually hard.</p>
           <div class="cta-actions">
-            <a href="pages/login.html" class="btn btn-primary">Create free account</a>
+            <a href="pages/login.html?mode=signup" class="btn btn-primary">Create an account</a>
             <a href="pages/market.html" class="btn btn-ghost">Browse the market</a>
           </div>
         </div>
@@ -245,102 +206,13 @@
     </section>
   </main>
 
-  <!-- ==================== FOOTER ==================== -->
-  <footer class="site-footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <a href="index.html" class="nav-logo"><span class="donut-mark">🍩</span> Donut Market</a>
-          <p>A virtual stock market built for fun — trade fictional companies, climb the leaderboard, and master the market with zero real-world risk.</p>
-        </div>
-        <div class="footer-col">
-          <h4>Platform</h4>
-          <a href="pages/market.html">Market</a>
-          <a href="pages/portfolio.html">Portfolio</a>
-          <a href="pages/leaderboard.html">Leaderboard</a>
-          <a href="pages/login.html">Login</a>
-        </div>
-        <div class="footer-col">
-          <h4>Company</h4>
-          <a href="#">About</a>
-          <a href="#">Careers</a>
-          <a href="#">Press</a>
-        </div>
-        <div class="footer-col">
-          <h4>Admin</h4>
-          <a href="pages/admin.html">Admin panel</a>
-          <a href="#">API docs</a>
-          <a href="#">Status</a>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 Donut Market. All rights reserved.</span>
-        <span class="footer-disclaimer">Donut Coins have no real-world value. This is a simulated market for entertainment purposes only.</span>
-      </div>
-    </div>
-  </footer>
+  <div data-shell="footer"></div>
 
-  <script src="js/main.js"></script>
   <script src="js/api.js"></script>
-  <script src="js/live.js"></script>
-  <script src="js/trade-modal.js"></script>
-  <script src="js/auth-ui.js"></script>
-  <script>
-    function setStat(id, value, decimals) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.setAttribute('data-counter', String(value));
-      if (decimals) el.setAttribute('data-decimals', String(decimals));
-      DM.animateCounter(el);
-    }
-
-    async function loadStats() {
-      const { stats, error } = await DM_LIVE.fetchStats();
-      if (error || !stats) {
-        document.getElementById('stat-total-coins-delta').textContent = 'Unavailable';
-        document.getElementById('stat-companies-delta').textContent = 'Unavailable';
-        document.getElementById('stat-traders-delta').textContent = 'Unavailable';
-        document.getElementById('stat-trades-today-delta').textContent = 'Unavailable';
-        return;
-      }
-
-      setStat('stat-total-coins', Math.round(stats.totalCoins));
-      setStat('stat-companies', stats.companiesListed);
-      setStat('stat-traders', stats.activeTraders);
-      setStat('stat-trades-today', stats.tradesToday);
-
-      document.getElementById('stat-total-coins-delta').textContent = 'Live from the market';
-      document.getElementById('stat-companies-delta').textContent =
-        stats.newCompaniesThisMonth > 0 ? `▲ ${stats.newCompaniesThisMonth} new this month` : 'No new listings this month';
-      document.getElementById('stat-traders-delta').textContent =
-        stats.newUsersToday > 0 ? `▲ ${stats.newUsersToday} new today` : 'Traded in the last 7 days';
-      document.getElementById('stat-trades-today-delta').textContent =
-        stats.tradesDeltaPct === null
-          ? `${stats.tradesToday} so far today`
-          : `${stats.tradesDeltaPct >= 0 ? '▲' : '▼'} ${Math.abs(stats.tradesDeltaPct).toFixed(0)}% vs yesterday`;
-    }
-
-    async function loadHome() {
-      DM.clearErrorBanner();
-
-      const { list: companies, error: companiesError } = await DM_LIVE.fetchCompanies();
-      if (companiesError) {
-        DM.showErrorBanner(`Couldn't load live market data: ${companiesError}`, loadHome);
-      } else {
-        DM.renderStockCards('#featured-stocks', companies.slice(0, 4));
-      }
-
-      const { list: board, error: leaderboardError } = await DM_LIVE.fetchLeaderboard();
-      if (leaderboardError && !companiesError) {
-        DM.showErrorBanner(`Couldn't load the leaderboard: ${leaderboardError}`, loadHome);
-      } else if (!leaderboardError) {
-        DM.renderLeaderboard('#leaderboard-preview', board.slice(0, 5));
-      }
-
-      loadStats();
-    }
-
-    loadHome();
-  </script>
+  <script src="js/components.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/ticket.js"></script>
+  <script src="js/shell.js"></script>
+  <script src="js/pages/home.js"></script>
 </body>
 </html>
